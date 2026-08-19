@@ -134,6 +134,7 @@
       <div class="btn2"><button class="btn" id="btnCap">Tomar foto</button><button class="btn sec" id="btnGal">Galería</button></div>
       <input id="capf" type="file" accept="image/*" capture="environment">
       <input id="gal" type="file" accept="image/*" multiple>
+      <div class="mut" id="gpsEstado" style="margin-top:6px">Ubicación: activa el permiso al tomar la primera foto.</div>
       <div class="opts">
         <div class="row">
           <div><label>Posición</label><select id="pos"><option value="bl">Inf. izq.</option><option value="br">Inf. der.</option><option value="tl">Sup. izq.</option><option value="tr">Sup. der.</option></select></div>
@@ -236,6 +237,11 @@ function renderExecItems(){
 }
 window.quitarExec=(i)=>{ execItems.splice(i,1); renderExecItems(); };
 function itemCant(cod){ const it=itemsCfg().find(i=>i.codigo===cod); return it?(it.cant||""):""; }
+function itemReq(cod){ const it=itemsCfg().find(i=>i.codigo===cod); return it?(it.req||""):""; }
+function opTag(){ if(!operador) return "";
+  const ini=slug(operador.nombre||"").split("-").filter(Boolean).map(w=>w[0]).join("").slice(0,3).toUpperCase();
+  const ced=(operador.cedula||"").replace(/\D/g,"").slice(-4);
+  const t=(ini||"OP")+(ced?"-"+ced:""); return slug(t); }
 
 let execItems = [];
 async function cargarReq(file){
@@ -294,19 +300,21 @@ $("lentrar").addEventListener("click", ()=>{
   if(!o.nombre||!o.cedula||!o.celular){ alert("Completa nombre, cédula y celular."); return; }
   operador=o; saveJSON("est_operador",o); pintarWho(); irACaptura();
 });
-$("reconfig").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
-$("salir").addEventListener("click", ()=>{ if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; } show("login"); });
+$("reconfig").addEventListener("click", ()=>{ detenerUbicacion(); prefillExec(); show("exec"); });
+$("salir").addEventListener("click", ()=>{ detenerUbicacion(); if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; } show("login"); });
 
 /* ---- OPERADOR: captura ---- */
 function irACaptura(){
   const s=$("item"); s.innerHTML="";
   itemsCfg().forEach(it=>{ const o=document.createElement("option"); o.value=it.codigo; o.textContent=it.req?`${it.codigo} · ${it.req}`:it.codigo; s.appendChild(o); });
   $("ctx").textContent = (cfg.cl||"—")+" · "+(cfg.ev||"—");
-  batch=[]; renderLista(); show("cap"); window.scrollTo(0,0);
+  batch=[]; renderLista(); show("cap"); window.scrollTo(0,0); iniciarUbicacion();
 }
 $("btnCap").addEventListener("click", abrirCamara);
 $("btnGal").addEventListener("click", ()=>$("gal").click());
-$("capf").addEventListener("change", e=>{ agregar(e.target.files); e.target.value=""; });
+$("capf").addEventListener("change", async e=>{ const files=[...e.target.files]; e.target.value=""; const coords=await posActual(); const now=new Date();
+  const meta=coords?{fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords.latitude,lon:coords.longitude}:null;
+  agregar(files, meta); });
 $("gal").addEventListener("change", e=>{ agregar(e.target.files); e.target.value=""; });
 $("reproc").addEventListener("click", reprocesarTodas);
 $("zip").addEventListener("click", ()=>empaquetar(false));
@@ -342,7 +350,7 @@ async function procesar(entry){
   renderLista();
 }
 function claveDe(cod){ return `${slug(cfg.cl)}|${slug(cfg.ev)}|${cod}`; }
-function calcularNombres(){ const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}_${String(e.consec).padStart(3,"0")}.jpg`; }); }
+function calcularNombres(){ const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag(); e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}_${String(e.consec).padStart(3,"0")}.jpg`; }); }
 function renderLista(){
   calcularNombres(); const c=$("list"); c.innerHTML="";
   const listas=batch.filter(e=>e.status==="listo").length;
@@ -391,13 +399,32 @@ function bajar(blob,nombre){ const a=document.createElement("a"); a.href=URL.cre
 
 /* ---- cámara ---- */
 let stream=null, facing="environment";
+let geoWatch=null, lastCoords=null, lastCoordsT=0;
+function gpsFresco(){ return lastCoords && (Date.now()-lastCoordsT)<45000; }
+function actualizarEstadoGPS(){ const el=$("gpsEstado"); if(!el) return;
+  if(gpsFresco()){ el.textContent="Ubicación lista ✓"; el.style.color="#1a7f37"; }
+  else if(geoWatch!=null){ el.textContent="Buscando ubicación…"; el.style.color="var(--muted)"; }
+  else { el.textContent="Ubicación: activa el permiso al tomar la primera foto."; el.style.color="var(--muted)"; } }
+function iniciarUbicacion(){ if(!navigator.geolocation||geoWatch!=null) return;
+  geoWatch=navigator.geolocation.watchPosition(
+    p=>{ lastCoords=p.coords; lastCoordsT=Date.now(); actualizarEstadoGPS(); },
+    ()=>{ actualizarEstadoGPS(); },
+    {enableHighAccuracy:true, timeout:20000, maximumAge:30000});
+  actualizarEstadoGPS(); }
+function detenerUbicacion(){ if(geoWatch!=null){ navigator.geolocation.clearWatch(geoWatch); geoWatch=null; } }
 $("camClose").addEventListener("click", cerrarCamara);
 $("camFlip").addEventListener("click", ()=>{ facing=facing==="environment"?"user":"environment"; abrirStream(); });
 $("camShot").addEventListener("click", capturar);
-async function abrirCamara(){ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream()){ $("camm").classList.add("hide"); $("capf").click(); } }
+async function abrirCamara(){ iniciarUbicacion(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream()){ $("camm").classList.add("hide"); $("capf").click(); } }
 async function abrirStream(){ try{ if(stream)stream.getTracks().forEach(t=>t.stop()); stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(_){ return false; } }
 function cerrarCamara(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $("camm").classList.add("hide"); }
-function posActual(){ return new Promise(res=>{ if(!navigator.geolocation) return res(null); navigator.geolocation.getCurrentPosition(p=>res(p.coords),()=>res(null),{enableHighAccuracy:true,timeout:8000,maximumAge:15000}); }); }
+function posActual(){ return new Promise(res=>{
+  if(gpsFresco()) return res(lastCoords);
+  if(!navigator.geolocation) return res(lastCoords||null);
+  navigator.geolocation.getCurrentPosition(
+    p=>{ lastCoords=p.coords; lastCoordsT=Date.now(); actualizarEstadoGPS(); res(p.coords); },
+    ()=>res(lastCoords||null),
+    {enableHighAccuracy:true, timeout:15000, maximumAge:30000}); }); }
 async function capturar(){
   const v=$("video"); if(!v.videoWidth) return;
   const c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext("2d").drawImage(v,0,0);
