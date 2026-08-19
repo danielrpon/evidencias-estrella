@@ -39,6 +39,11 @@
   .ev select{padding:6px 8px;font-size:12.5px} .ev .ac{display:flex;gap:12px;margin-top:5px}
   .cnt{font-size:12px;color:var(--muted);margin:0 0 9px}
   .qrbox{display:flex;justify-content:center;margin-top:12px} .qrbox canvas,.qrbox img{background:#fff;border-radius:10px;padding:8px;border:1px solid var(--line);display:block}
+  .invite{background:#f7f9fc;border:1px solid #d3e2f4;border-radius:12px;padding:14px;text-align:center;margin-top:6px}
+  .invite .it{font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--azul)}
+  .invite .ic{font-size:17px;font-weight:800;color:var(--txt);margin-top:4px}
+  .invite .ie{font-size:13px;color:var(--muted)}
+  .invite .il{font-family:var(--mono);font-size:13px;color:var(--azul);word-break:break-all;margin-top:8px}
   .hide{display:none!important}
   .cam{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column}
   .cam video{flex:1;width:100%;min-height:0;object-fit:cover;background:#000}
@@ -95,11 +100,14 @@
       <div style="height:14px"></div>
       <button class="btn" id="egen" disabled>Generar acceso para operadores</button>
       <div id="acWrap" class="hide">
-        <div class="qrbox"><div id="acQR"></div></div>
-        <div class="mut" style="text-align:center">Los operadores escanean este código para entrar.</div>
-        <div style="height:10px"></div>
-        <label>Enlace de acceso</label><input id="acLink" type="text" readonly>
-        <div class="btn2"><button class="btn sec" id="acCopy">Copiar enlace</button><button class="btn" id="acGo">Continuar como operador</button></div>
+        <div class="invite">
+          <div class="it">Invitación · Captura de evidencias</div>
+          <div class="ic" id="invCli"></div>
+          <div class="ie" id="invEv"></div>
+          <div class="qrbox"><div id="acQR"></div></div>
+          <div class="il" id="acLink"></div>
+        </div>
+        <div class="btn2"><button class="btn sec" id="acCopy">Copiar invitación</button><button class="btn" id="acGo">Continuar como operador</button></div>
       </div>
     </div>
   </div>
@@ -212,7 +220,7 @@ $("ebtnReq").addEventListener("click", ()=>$("efileReq").click());
 $("efileReq").addEventListener("change", e=>{ if(e.target.files[0]) cargarReq(e.target.files[0]); });
 ["ecliente","eevento"].forEach(id=>$(id).addEventListener("input", chequearGen));
 $("egen").addEventListener("click", generarAcceso);
-$("acCopy").addEventListener("click", ()=>{ navigator.clipboard && navigator.clipboard.writeText($("acLink").value); $("acCopy").textContent="Copiado"; });
+$("acCopy").addEventListener("click", ()=>{ if(navigator.clipboard) navigator.clipboard.writeText(invitacionTexto()); $("acCopy").textContent="Invitación copiada"; });
 $("acGo").addEventListener("click", ()=>{ saveConfigDesdeExec(); irALogin(); });
 $("goExec").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
 $("goOper").addEventListener("click", ()=>{ if(cfg) irALogin(); else $("homeHint").textContent="Aún no hay una operación configurada en este dispositivo. Pide el enlace o QR de acceso a tu ejecutivo."; });
@@ -252,13 +260,28 @@ function saveConfigDesdeExec(){
           it:execItems.map(i=>({codigo:i.codigo,req:i.req,cant:i.cant||""})), od:(localStorage.getItem("est_onedrive")||"") };
   saveJSON("est_config", cfg);
 }
+let accesoLink="", accesoCorto="";
 function generarAcceso(){
   saveConfigDesdeExec();
-  const link = PROD+"#c="+encodeURIComponent(encCfg(cfg));
-  $("acLink").value = link; $("acWrap").classList.remove("hide"); $("acCopy").textContent="Copiar enlace";
+  accesoLink = PROD+"#c="+encodeURIComponent(encCfg(cfg)); accesoCorto="";
+  $("invCli").textContent = cfg.cl || "—";
+  $("invEv").textContent = [cfg.ev, cfg.fe, cfg.ci].filter(Boolean).join("  ·  ");
+  $("acLink").textContent = "Generando enlace…";
+  $("acWrap").classList.remove("hide"); $("acCopy").textContent="Copiar invitación";
   $("acQR").innerHTML="";
-  if(window.QRCode){ try{ new QRCode($("acQR"), {text:link, width:220, height:220, colorDark:"#0B4EA2", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.L}); }
-    catch(e){ $("acQR").innerHTML='<div class="mut">La lista es muy larga para el QR; comparte el enlace de abajo.</div>'; } }
+  if(window.QRCode){ try{ new QRCode($("acQR"), {text:accesoLink, width:220, height:220, colorDark:"#0B4EA2", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.L}); }
+    catch(e){ $("acQR").innerHTML='<div class="mut">Lista muy larga para el QR; comparte el enlace.</div>'; } }
+  acortar(accesoLink);
+}
+async function acortar(url){
+  try{ const r=await fetch("https://tinyurl.com/api-create.php?url="+encodeURIComponent(url)); const s=(await r.text()).trim();
+    if(/^https?:\/\//.test(s)){ accesoCorto=s; $("acLink").textContent=s; return; } }catch(_){}
+  $("acLink").textContent = url;   // respaldo: enlace completo si el acortador falla
+}
+function invitacionTexto(){
+  const link = accesoCorto || accesoLink;
+  const l2 = [cfg.ev, cfg.fe, cfg.ci].filter(Boolean).join(" · ");
+  return `Invitación — Captura de evidencias\nCliente: ${cfg.cl}\n${l2?("Evento: "+l2+"\n"):""}\nIngresa a la plataforma para cargar tus evidencias:\n${link}\n\nÁbrelo en tu celular, regístrate (nombre, cédula y celular) y comienza a capturar.`;
 }
 
 /* ---- OPERADOR: login ---- */
