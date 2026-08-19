@@ -18,7 +18,7 @@
   .role{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--verde);margin-bottom:4px}
   label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;font-weight:600;letter-spacing:.3px}
   input,select{width:100%;background:var(--field);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:11px;font-size:15px;font-family:var(--font)}
-  .fld+.fld{margin-top:10px} .row{display:flex;gap:10px} .row>*{flex:1;min-width:0}
+  .fld+.fld{margin-top:10px} .row{display:flex;gap:10px} .row>*{flex:1;min-width:0} .row .fld+.fld{margin-top:0}
   .btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--verde);color:#062915}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .btn.sec{background:transparent;color:var(--txt);border:1px solid var(--line);font-weight:600}
@@ -50,6 +50,17 @@
   <div class="top">
     <div class="brand">Evidencias <span>Estrella</span></div>
     <div class="who"><span id="who"></span> <a class="lnk" id="btnCfg">Ajustes</a></div>
+  </div>
+
+  <!-- INICIO · ELEGIR ROL -->
+  <div id="home" class="hide">
+    <div class="card">
+      <div class="h">¿Cómo vas a usar la app?</div>
+      <button class="btn" id="goExec">Ejecutivo de cuenta · Configurar operación</button>
+      <div style="height:10px"></div>
+      <button class="btn sec" id="goOper">Operador · Ingresar a capturar</button>
+      <div class="mut" id="homeHint">El operador normalmente entra escaneando el QR o abriendo el enlace que le comparte el ejecutivo.</div>
+    </div>
   </div>
 
   <!-- EJECUTIVO · CONFIGURACIÓN -->
@@ -157,7 +168,7 @@ function saveJSON(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_
 const z = n => String(n).padStart(2,"0");
 const slug = s => (s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "NA";
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
-function show(id){ ["exec","login","cap"].forEach(s=>$(s).classList.toggle("hide", s!==id)); }
+function show(id){ ["home","exec","login","cap"].forEach(s=>$(s).classList.toggle("hide", s!==id)); }
 function itemsCfg(){ return (cfg&&cfg.it)||[]; }
 
 /* encode/decode de configuración para el enlace */
@@ -172,7 +183,10 @@ window.addEventListener("DOMContentLoaded", () => {
   cfg = fromLink || loadJSON("est_config", null);
   if(fromLink){ saveJSON("est_config", cfg); if(cfg.od && !localStorage.getItem("est_onedrive")){ localStorage.setItem("est_onedrive",cfg.od); $("odlink").value=cfg.od; } }
   pintarWho();
-  if(cfg) irALogin(); else { show("exec"); }
+  const hash = location.hash.replace(/^#/,"");
+  if(fromLink) irALogin();                                 // entró por enlace/QR -> operador
+  else if(hash==="admin"){ prefillExec(); show("exec"); }  // URL de administrador -> ejecutivo
+  else show("home");                                       // URL base -> elegir rol
 });
 function pintarWho(){ $("who").textContent = operador ? (operador.nombre+" · "+operador.cedula) : ""; }
 
@@ -183,6 +197,9 @@ $("efileReq").addEventListener("change", e=>{ if(e.target.files[0]) cargarReq(e.
 $("egen").addEventListener("click", generarAcceso);
 $("acCopy").addEventListener("click", ()=>{ navigator.clipboard && navigator.clipboard.writeText($("acLink").value); $("acCopy").textContent="Copiado"; });
 $("acGo").addEventListener("click", ()=>{ saveConfigDesdeExec(); irALogin(); });
+$("goExec").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
+$("goOper").addEventListener("click", ()=>{ if(cfg) irALogin(); else $("homeHint").textContent="Aún no hay una operación configurada en este dispositivo. Pide el enlace o QR de acceso a tu ejecutivo."; });
+function prefillExec(){ if(cfg){ $("ecliente").value=cfg.cl||""; $("eevento").value=cfg.ev||""; execItems=itemsCfg().slice(); $("ereqInfo").textContent=execItems.length+" evidencias cargadas."; chequearGen(); } }
 
 let execItems = [];
 async function cargarReq(file){
@@ -222,10 +239,7 @@ $("lentrar").addEventListener("click", ()=>{
   if(!o.nombre||!o.cedula||!o.celular){ alert("Completa nombre, cédula y celular."); return; }
   operador=o; saveJSON("est_operador",o); pintarWho(); irACaptura();
 });
-$("reconfig").addEventListener("click", ()=>{
-  if(cfg){ $("ecliente").value=cfg.cl||""; $("eevento").value=cfg.ev||""; execItems=itemsCfg().slice(); $("ereqInfo").textContent=execItems.length+" evidencias cargadas."; chequearGen(); }
-  show("exec");
-});
+$("reconfig").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
 $("salir").addEventListener("click", ()=>{ if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; } show("login"); });
 
 /* ---- OPERADOR: captura ---- */
