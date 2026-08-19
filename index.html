@@ -5,58 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Evidencias · Estrella</title>
 <style>
-  :root{
-    --bg:#0e0e0e; --panel:#171717; --line:#292929; --field:#0f0f0f;
-    --verde:#26E57C; --txt:#f2f2f2; --muted:#8f8f8f;
-    --font:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--bg);color:var(--txt);font-family:var(--font);-webkit-font-smoothing:antialiased;
-       padding:env(safe-area-inset-top) 0 24px;font-size:15px;line-height:1.4}
+  :root{ --bg:#0e0e0e; --panel:#171717; --line:#292929; --field:#0f0f0f; --verde:#26E57C; --txt:#f2f2f2; --muted:#8f8f8f;
+    --font:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--font);-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top) 0 24px;font-size:15px;line-height:1.4}
   .wrap{max-width:600px;margin:0 auto;padding:14px}
   .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:2px 2px 12px}
-  .brand{font-size:15px;font-weight:800;letter-spacing:.2px}
-  .brand span{color:var(--verde)}
-  .who{font-size:12px;color:var(--muted)}
-  .who a{color:var(--verde);text-decoration:none}
+  .brand{font-size:15px;font-weight:800;letter-spacing:.2px} .brand span{color:var(--verde)}
+  .who{font-size:12px;color:var(--muted)} .who a{color:var(--verde);text-decoration:none}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
   .h{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .role{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--verde);margin-bottom:4px}
   label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;font-weight:600;letter-spacing:.3px}
-  input,select{width:100%;background:var(--field);border:1px solid var(--line);color:var(--txt);
-       border-radius:9px;padding:11px 11px;font-size:15px;font-family:var(--font)}
-  .fld+.fld{margin-top:10px}
-  .row{display:flex;gap:10px}
-  .row>*{flex:1;min-width:0}
-  .btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;
-       cursor:pointer;font-family:var(--font);background:var(--verde);color:#062915}
+  input,select{width:100%;background:var(--field);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:11px;font-size:15px;font-family:var(--font)}
+  .fld+.fld{margin-top:10px} .row{display:flex;gap:10px} .row>*{flex:1;min-width:0}
+  .btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--verde);color:#062915}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .btn.sec{background:transparent;color:var(--txt);border:1px solid var(--line);font-weight:600}
-  .btn+.btn,.btn2>*{margin-top:0}
-  .btn2{display:flex;gap:10px;margin-top:10px}
-  .btn2 .btn{margin:0}
-  .mut{font-size:12px;color:var(--muted);margin-top:8px}
-  .lnk{color:var(--verde);cursor:pointer;text-decoration:underline;font-size:12px}
+  .btn2{display:flex;gap:10px;margin-top:10px} .btn2 .btn{margin:0}
+  .mut{font-size:12px;color:var(--muted);margin-top:8px} .lnk{color:var(--verde);cursor:pointer;text-decoration:underline;font-size:12px}
   input[type=file]{display:none}
-  .tgl{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--txt);cursor:pointer}
-  .tgl input{width:18px;height:18px;accent-color:var(--verde);flex:none}
-  .opts{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
-  .opts .row{flex:1 1 100%}
+  .tgl{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--txt);cursor:pointer} .tgl input{width:18px;height:18px;accent-color:var(--verde);flex:none}
+  .opts{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px} .opts .row{flex:1 1 100%}
+  .banner{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:12px}
+  .banner b{color:var(--txt)} .banner .s{font-size:12px;color:var(--muted)}
   .list{display:flex;flex-direction:column;gap:9px;margin-top:4px}
   .ev{display:flex;gap:11px;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:9px}
   .ev img{width:66px;height:66px;object-fit:cover;border-radius:7px;flex:none;background:#000}
-  .ev .in{flex:1;min-width:0}
-  .ev .fn{font-family:var(--mono);font-size:11px;color:var(--verde);word-break:break-all;margin-top:4px}
-  .ev select{padding:6px 8px;font-size:12.5px}
-  .ev .ac{display:flex;gap:12px;margin-top:5px}
+  .ev .in{flex:1;min-width:0} .ev .fn{font-family:var(--mono);font-size:11px;color:var(--verde);word-break:break-all;margin-top:4px}
+  .ev select{padding:6px 8px;font-size:12.5px} .ev .ac{display:flex;gap:12px;margin-top:5px}
   .cnt{font-size:12px;color:var(--muted);margin:0 0 9px}
+  .qrbox{text-align:center;margin-top:12px} .qrbox canvas{background:#fff;border-radius:10px;padding:8px}
   .hide{display:none!important}
   .cam{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column}
   .cam video{flex:1;width:100%;min-height:0;object-fit:cover;background:#000}
   .cam .hint{color:var(--muted);font-size:12px;text-align:center;padding:7px}
-  .cam .bar{display:flex;gap:10px;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:#0e0e0e;border-top:1px solid var(--line)}
-  .cam .bar .btn{flex:1}
+  .cam .bar{display:flex;gap:10px;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:#0e0e0e;border-top:1px solid var(--line)} .cam .bar .btn{flex:1}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
   .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;width:100%;max-width:520px}
 </style>
@@ -68,71 +52,70 @@
     <div class="who"><span id="who"></span> <a class="lnk" id="btnCfg">Ajustes</a></div>
   </div>
 
-  <!-- PASO 0 · OPERADOR -->
-  <div id="s0">
+  <!-- EJECUTIVO · CONFIGURACIÓN -->
+  <div id="exec" class="hide">
     <div class="card">
-      <div class="h">Operador</div>
-      <div class="fld"><label>Cédula</label><input id="ced" type="text" inputmode="numeric" autocomplete="off"></div>
-      <div class="fld"><label>Nombre completo</label><input id="nom" type="text" autocomplete="off"></div>
-      <div class="fld"><label>Celular</label><input id="cel" type="text" inputmode="tel" autocomplete="off"></div>
-      <div style="height:12px"></div>
-      <button class="btn" id="entrar">Ingresar</button>
-      <div class="mut">Sin contraseña. Queda registrado en este dispositivo para saber quién cargó cada foto.</div>
-    </div>
-  </div>
-
-  <!-- PASO 1 · REQUERIMIENTOS -->
-  <div id="s1" class="hide">
-    <div class="card">
-      <div class="h">Requerimientos de la auditoría</div>
-      <button class="btn sec" id="btnReq">Cargar Excel / CSV de ítems</button>
-      <input id="fileReq" type="file" accept=".xlsx,.xls,.csv">
-      <div class="mut" id="reqInfo">Columnas: item_codigo · requerimiento · (evento · cliente · ciudad opcionales)</div>
-      <div style="height:12px"></div>
+      <div class="role">Ejecutivo de cuenta</div>
+      <div class="h">Configurar operación</div>
       <div class="row">
-        <div class="fld"><label>Cliente</label><input id="cliente" type="text" autocomplete="off"></div>
-        <div class="fld"><label>Evento</label><input id="evento" type="text" autocomplete="off"></div>
+        <div class="fld"><label>Cliente</label><input id="ecliente" type="text" autocomplete="off"></div>
+        <div class="fld"><label>Evento</label><input id="eevento" type="text" autocomplete="off"></div>
       </div>
       <div style="height:12px"></div>
-      <button class="btn" id="continuar" disabled>Continuar</button>
+      <button class="btn sec" id="ebtnReq">Cargar lista de evidencias (Excel / CSV)</button>
+      <input id="efileReq" type="file" accept=".xlsx,.xls,.csv">
+      <div class="mut" id="ereqInfo">Columnas: item_codigo · requerimiento (evento/cliente/ciudad opcionales)</div>
+      <div style="height:14px"></div>
+      <button class="btn" id="egen" disabled>Generar acceso para operadores</button>
+      <div id="acWrap" class="hide">
+        <div class="qrbox"><canvas id="acQR"></canvas></div>
+        <div class="mut" style="text-align:center">Los operadores escanean este código para entrar.</div>
+        <div style="height:10px"></div>
+        <label>Enlace de acceso</label><input id="acLink" type="text" readonly>
+        <div class="btn2"><button class="btn sec" id="acCopy">Copiar enlace</button><button class="btn" id="acGo">Continuar como operador</button></div>
+      </div>
     </div>
   </div>
 
-  <!-- PASO 2 · EVIDENCIAS -->
-  <div id="s2" class="hide">
+  <!-- OPERADOR · LOGIN -->
+  <div id="login" class="hide">
+    <div class="card">
+      <div class="banner"><b id="lbCli"></b><div class="s" id="lbEv"></div></div>
+      <div class="role">Operador</div>
+      <div class="h">Ingreso</div>
+      <div class="fld"><label>Nombre completo</label><input id="lnom" type="text" autocomplete="off"></div>
+      <div class="fld"><label>Cédula</label><input id="lced" type="text" inputmode="numeric" autocomplete="off"></div>
+      <div class="fld"><label>Celular</label><input id="lcel" type="text" inputmode="tel" autocomplete="off"></div>
+      <div style="height:12px"></div>
+      <button class="btn" id="lentrar">Ingresar</button>
+      <div class="mut">Sin contraseña. Se registra para saber quién cargó cada evidencia. <a class="lnk" id="reconfig">Soy el ejecutivo</a></div>
+    </div>
+  </div>
+
+  <!-- OPERADOR · CAPTURA -->
+  <div id="cap" class="hide">
     <div class="card">
       <div class="h" id="ctx"></div>
-      <label>Ítem para las próximas fotos</label>
+      <label>Ítem a evidenciar</label>
       <select id="item"></select>
-      <div class="btn2">
-        <button class="btn" id="btnCap">Tomar foto</button>
-        <button class="btn sec" id="btnGal">Galería</button>
-      </div>
-      <input id="cap" type="file" accept="image/*" capture="environment">
+      <div class="btn2"><button class="btn" id="btnCap">Tomar foto</button><button class="btn sec" id="btnGal">Galería</button></div>
+      <input id="capf" type="file" accept="image/*" capture="environment">
       <input id="gal" type="file" accept="image/*" multiple>
       <div class="opts">
         <div class="row">
-          <div><label>Posición</label>
-            <select id="pos"><option value="bl">Inf. izq.</option><option value="br">Inf. der.</option>
-              <option value="tl">Sup. izq.</option><option value="tr">Sup. der.</option></select></div>
-          <div><label>Tamaño</label>
-            <select id="esc"><option value="2.6">Pequeño</option><option value="3.4" selected>Medio</option>
-              <option value="4.4">Grande</option><option value="5.6">Muy grande</option></select></div>
+          <div><label>Posición</label><select id="pos"><option value="bl">Inf. izq.</option><option value="br">Inf. der.</option><option value="tl">Sup. izq.</option><option value="tr">Sup. der.</option></select></div>
+          <div><label>Tamaño</label><select id="esc"><option value="2.6">Pequeño</option><option value="3.4" selected>Medio</option><option value="4.4">Grande</option><option value="5.6">Muy grande</option></select></div>
         </div>
         <label class="tgl"><input id="marca" type="checkbox" checked> Aplicar marca de agua (dirección · fecha · hora)</label>
       </div>
     </div>
-
     <div class="card">
       <div class="h">Evidencias del lote</div>
       <div class="cnt" id="cnt">Aún no agregas fotos.</div>
       <div class="list" id="list"></div>
       <div style="height:12px"></div>
       <button class="btn" id="enviar" disabled>Enviar evidencias</button>
-      <div class="btn2">
-        <button class="btn sec" id="zip" disabled>Descargar ZIP</button>
-        <button class="btn sec" id="reproc">Re-procesar</button>
-      </div>
+      <div class="btn2"><button class="btn sec" id="zip" disabled>Descargar ZIP</button><button class="btn sec" id="reproc">Re-procesar</button></div>
       <div class="mut" id="sendInfo"></div>
     </div>
     <div class="top" style="padding-top:0"><span></span><span class="who"><a class="lnk" id="salir">Cambiar operador</a></span></div>
@@ -140,37 +123,31 @@
 </div>
 
 <!-- AJUSTES -->
-<div id="cfg" class="modal hide">
-  <div class="sheet">
-    <div class="h">Ajustes</div>
-    <div class="fld"><label>Carpeta OneDrive (destino)</label>
-      <input id="odlink" type="text" placeholder="Pega el enlace de la carpeta compartida" autocomplete="off"></div>
-    <div class="mut">Aquí llegan las evidencias al presionar Enviar. En móvil se ofrece OneDrive/Teams directamente.</div>
-    <div style="height:14px"></div>
-    <div class="btn2"><button class="btn sec" id="cfgClose">Cerrar</button><button class="btn" id="cfgSave">Guardar</button></div>
-  </div>
-</div>
+<div id="cfgm" class="modal hide"><div class="sheet">
+  <div class="h">Ajustes</div>
+  <div class="fld"><label>Carpeta OneDrive (destino)</label><input id="odlink" type="text" placeholder="Pega el enlace de la carpeta compartida" autocomplete="off"></div>
+  <div class="mut">Aquí llegan las evidencias al Enviar. En móvil se ofrece OneDrive/Teams directamente.</div>
+  <div style="height:14px"></div>
+  <div class="btn2"><button class="btn sec" id="cfgClose">Cerrar</button><button class="btn" id="cfgSave">Guardar</button></div>
+</div></div>
 
 <!-- CÁMARA -->
-<div id="cam" class="cam hide">
+<div id="camm" class="cam hide">
   <video id="video" autoplay playsinline muted></video>
   <div class="hint" id="camhint">Encuadra la evidencia y captura.</div>
-  <div class="bar">
-    <button class="btn sec" id="camClose">Cerrar</button>
-    <button class="btn" id="camShot">Capturar</button>
-    <button class="btn sec" id="camFlip">Girar</button>
-  </div>
+  <div class="bar"><button class="btn sec" id="camClose">Cerrar</button><button class="btn" id="camShot">Capturar</button><button class="btn sec" id="camFlip">Girar</button></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const VERDE = "#26E57C";
+let cfg = null;              // {cl, ev, it:[{codigo,req}], od}
 let operador = loadJSON("est_operador", null);
-let items = loadJSON("est_items", []);
 let counters = loadJSON("est_counters", {});
 let batch = [], seq = 0;
 const geoCache = {}; let geoChain = Promise.resolve();
@@ -180,117 +157,134 @@ function saveJSON(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_
 const z = n => String(n).padStart(2,"0");
 const slug = s => (s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "NA";
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
-function show(id){ ["s0","s1","s2"].forEach(s=>$(s).classList.toggle("hide", s!==id)); }
+function show(id){ ["exec","login","cap"].forEach(s=>$(s).classList.toggle("hide", s!==id)); }
+function itemsCfg(){ return (cfg&&cfg.it)||[]; }
 
-/* ---- arranque ---- */
+/* encode/decode de configuración para el enlace */
+function encCfg(c){ return btoa(unescape(encodeURIComponent(JSON.stringify(c)))); }
+function decCfg(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(_){ return null; } }
+
+/* ---- arranque: decide rol ---- */
 window.addEventListener("DOMContentLoaded", () => {
-  $("cliente").value = localStorage.getItem("est_cliente")||"";
-  $("evento").value  = localStorage.getItem("est_evento")||"";
-  $("odlink").value  = localStorage.getItem("est_onedrive")||"";
-  if(items.length){ $("reqInfo").textContent = items.length+" ítems cargados."; actualizarContinuar(); }
-  if(operador){ pintarOperador(); show("s1"); } else show("s0");
+  $("odlink").value = localStorage.getItem("est_onedrive")||"";
+  const m = location.hash.match(/[#&]c=([^&]+)/);
+  const fromLink = m ? decCfg(decodeURIComponent(m[1])) : null;
+  cfg = fromLink || loadJSON("est_config", null);
+  if(fromLink){ saveJSON("est_config", cfg); if(cfg.od && !localStorage.getItem("est_onedrive")){ localStorage.setItem("est_onedrive",cfg.od); $("odlink").value=cfg.od; } }
+  pintarWho();
+  if(cfg) irALogin(); else { show("exec"); }
 });
-function pintarOperador(){ $("who").innerHTML = operador ? (operador.nombre+" · "+operador.cedula) : ""; }
+function pintarWho(){ $("who").textContent = operador ? (operador.nombre+" · "+operador.cedula) : ""; }
 
-/* ---- Paso 0: operador ---- */
-$("entrar").addEventListener("click", () => {
-  const o = { cedula:$("ced").value.trim(), nombre:$("nom").value.trim(), celular:$("cel").value.trim() };
-  if(!o.cedula || !o.nombre || !o.celular){ alert("Completa cédula, nombre y celular."); return; }
-  operador = o; saveJSON("est_operador", o); pintarOperador(); show("s1");
-});
-$("salir").addEventListener("click", () => {
-  if(operador){ $("ced").value=operador.cedula; $("nom").value=operador.nombre; $("cel").value=operador.celular; }
-  show("s0");
-});
+/* ---- EJECUTIVO ---- */
+$("ebtnReq").addEventListener("click", ()=>$("efileReq").click());
+$("efileReq").addEventListener("change", e=>{ if(e.target.files[0]) cargarReq(e.target.files[0]); });
+["ecliente","eevento"].forEach(id=>$(id).addEventListener("input", chequearGen));
+$("egen").addEventListener("click", generarAcceso);
+$("acCopy").addEventListener("click", ()=>{ navigator.clipboard && navigator.clipboard.writeText($("acLink").value); $("acCopy").textContent="Copiado"; });
+$("acGo").addEventListener("click", ()=>{ saveConfigDesdeExec(); irALogin(); });
 
-/* ---- Paso 1: requerimientos ---- */
-$("btnReq").addEventListener("click", ()=>$("fileReq").click());
-$("fileReq").addEventListener("change", e=>{ if(e.target.files[0]) cargarReq(e.target.files[0]); });
-["cliente","evento"].forEach(id=>$(id).addEventListener("input", guardarCtx));
-$("odlink").addEventListener("input", ()=>localStorage.setItem("est_onedrive",$("odlink").value.trim()));
-$("btnCfg").addEventListener("click", ()=>$("cfg").classList.remove("hide"));
-$("cfgClose").addEventListener("click", ()=>$("cfg").classList.add("hide"));
-$("cfgSave").addEventListener("click", ()=>{ localStorage.setItem("est_onedrive",$("odlink").value.trim()); $("cfg").classList.add("hide"); });
-$("continuar").addEventListener("click", irAPaso2);
-
+let execItems = [];
 async function cargarReq(file){
   try{
     const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:""});
     const get=(o,n)=>{ for(const k in o){ if(n.includes(k.trim().toLowerCase())) return String(o[k]).trim(); } return ""; };
-    items = rows.map(r=>({ codigo:get(r,["item_codigo","codigo","código","item","ítem","id","cod"]),
-      req:get(r,["requerimiento","descripcion","descripción","detalle","concepto"]),
-      evento:get(r,["evento","nombre_evento"]), cliente:get(r,["cliente","client"]) })).filter(x=>x.codigo);
-    if(!items.length){ $("reqInfo").textContent="No se encontró la columna de código (item_codigo / codigo / id)."; return; }
-    saveJSON("est_items", items);
-    if(!$("cliente").value){ const c=items.find(i=>i.cliente); if(c)$("cliente").value=c.cliente; }
-    if(!$("evento").value){ const e=items.find(i=>i.evento); if(e)$("evento").value=e.evento; }
-    guardarCtx(); $("reqInfo").textContent=items.length+" ítems cargados."; actualizarContinuar();
-  }catch(err){ $("reqInfo").textContent="No se pudo leer el archivo: "+err.message; }
+    execItems = rows.map(r=>({ codigo:get(r,["item_codigo","codigo","código","item","ítem","id","cod"]), req:get(r,["requerimiento","descripcion","descripción","detalle","concepto"]) })).filter(x=>x.codigo);
+    const c=rows.map(r=>get(r,["cliente","client"])).find(Boolean), e=rows.map(r=>get(r,["evento","nombre_evento"])).find(Boolean);
+    if(c && !$("ecliente").value) $("ecliente").value=c;
+    if(e && !$("eevento").value) $("eevento").value=e;
+    $("ereqInfo").textContent = execItems.length ? execItems.length+" evidencias cargadas." : "No se encontró la columna de código (item_codigo / codigo / id).";
+    chequearGen();
+  }catch(err){ $("ereqInfo").textContent="No se pudo leer: "+err.message; }
 }
-function guardarCtx(){ localStorage.setItem("est_cliente",$("cliente").value.trim()); localStorage.setItem("est_evento",$("evento").value.trim()); }
-function actualizarContinuar(){ $("continuar").disabled = !items.length; }
-function irAPaso2(){
-  const s=$("item"); s.innerHTML="";
-  items.forEach(it=>{ const o=document.createElement("option"); o.value=it.codigo; o.textContent=it.req?`${it.codigo} · ${it.req}`:it.codigo; s.appendChild(o); });
-  $("ctx").textContent = ($("cliente").value||"—")+" · "+($("evento").value||"—");
-  show("s2"); window.scrollTo(0,0);
+function chequearGen(){ $("egen").disabled = !(execItems.length && $("ecliente").value.trim() && $("eevento").value.trim()); }
+function saveConfigDesdeExec(){
+  cfg = { cl:$("ecliente").value.trim(), ev:$("eevento").value.trim(), it:execItems.map(i=>({codigo:i.codigo,req:i.req})), od:(localStorage.getItem("est_onedrive")||"") };
+  saveJSON("est_config", cfg);
+}
+function generarAcceso(){
+  saveConfigDesdeExec();
+  const link = location.origin+location.pathname+"#c="+encodeURIComponent(encCfg(cfg));
+  $("acLink").value = link; $("acWrap").classList.remove("hide"); $("acCopy").textContent="Copiar enlace";
+  if(window.QRCode){ try{ QRCode.toCanvas($("acQR"), link, {width:220,margin:1,color:{dark:"#0e0e0e",light:"#ffffff"}}, ()=>{}); }catch(_){} }
 }
 
-/* ---- Paso 2: fotos ---- */
+/* ---- OPERADOR: login ---- */
+function irALogin(){
+  $("lbCli").textContent = "Cliente: "+(cfg.cl||"—");
+  $("lbEv").textContent = "Evento: "+(cfg.ev||"—")+"  ·  "+itemsCfg().length+" evidencias";
+  if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; }
+  show("login");
+}
+$("lentrar").addEventListener("click", ()=>{
+  const o={ nombre:$("lnom").value.trim(), cedula:$("lced").value.trim(), celular:$("lcel").value.trim() };
+  if(!o.nombre||!o.cedula||!o.celular){ alert("Completa nombre, cédula y celular."); return; }
+  operador=o; saveJSON("est_operador",o); pintarWho(); irACaptura();
+});
+$("reconfig").addEventListener("click", ()=>{
+  if(cfg){ $("ecliente").value=cfg.cl||""; $("eevento").value=cfg.ev||""; execItems=itemsCfg().slice(); $("ereqInfo").textContent=execItems.length+" evidencias cargadas."; chequearGen(); }
+  show("exec");
+});
+$("salir").addEventListener("click", ()=>{ if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; } show("login"); });
+
+/* ---- OPERADOR: captura ---- */
+function irACaptura(){
+  const s=$("item"); s.innerHTML="";
+  itemsCfg().forEach(it=>{ const o=document.createElement("option"); o.value=it.codigo; o.textContent=it.req?`${it.codigo} · ${it.req}`:it.codigo; s.appendChild(o); });
+  $("ctx").textContent = (cfg.cl||"—")+" · "+(cfg.ev||"—");
+  batch=[]; renderLista(); show("cap"); window.scrollTo(0,0);
+}
 $("btnCap").addEventListener("click", abrirCamara);
 $("btnGal").addEventListener("click", ()=>$("gal").click());
-$("cap").addEventListener("change", e=>{ agregar(e.target.files); e.target.value=""; });
+$("capf").addEventListener("change", e=>{ agregar(e.target.files); e.target.value=""; });
 $("gal").addEventListener("change", e=>{ agregar(e.target.files); e.target.value=""; });
 $("reproc").addEventListener("click", reprocesarTodas);
-$("zip").addEventListener("click", ()=>empaquetarYentregar(false));
-$("enviar").addEventListener("click", ()=>empaquetarYentregar(true));
+$("zip").addEventListener("click", ()=>empaquetar(false));
+$("enviar").addEventListener("click", ()=>empaquetar(true));
 
+/* ---- Ajustes ---- */
+$("odlink").addEventListener("input", ()=>localStorage.setItem("est_onedrive",$("odlink").value.trim()));
+$("btnCfg").addEventListener("click", ()=>$("cfgm").classList.remove("hide"));
+$("cfgClose").addEventListener("click", ()=>$("cfgm").classList.add("hide"));
+$("cfgSave").addEventListener("click", ()=>{ localStorage.setItem("est_onedrive",$("odlink").value.trim()); $("cfgm").classList.add("hide"); });
+
+/* ---- lote ---- */
 function agregar(fileList, meta){
-  const cod = $("item").value;
-  [...fileList].forEach(file=>{ const e={ id:++seq, file, itemCodigo:cod, status:"procesando", blob:null, thumb:"", datos:{}, filename:"", meta:meta||null }; batch.push(e); procesar(e); });
+  const cod=$("item").value;
+  [...fileList].forEach(file=>{ const e={id:++seq,file,itemCodigo:cod,status:"procesando",blob:null,thumb:"",datos:{},filename:"",meta:meta||null}; batch.push(e); procesar(e); });
   renderLista();
 }
 async function procesar(entry){
   try{
-    const bitmap = await decodificar(entry.file);
+    const bitmap=await decodificar(entry.file);
     let ex;
-    if(entry.meta){ ex={ fecha:entry.meta.fecha||"", hora:entry.meta.hora||"", lat:entry.meta.lat, lon:entry.meta.lon }; }
-    else{
-      ex={ fecha:"", hora:"", lat:null, lon:null };
-      try{ const d=await exifr.parse(entry.file,["DateTimeOriginal","CreateDate"]); const f=d&&(d.DateTimeOriginal||d.CreateDate);
-        if(f instanceof Date){ ex.fecha=`${f.getFullYear()}-${z(f.getMonth()+1)}-${z(f.getDate())}`; ex.hora=`${z(f.getHours())}:${z(f.getMinutes())}`; } }catch(_){}
+    if(entry.meta){ ex={fecha:entry.meta.fecha||"",hora:entry.meta.hora||"",lat:entry.meta.lat,lon:entry.meta.lon}; }
+    else{ ex={fecha:"",hora:"",lat:null,lon:null};
+      try{ const d=await exifr.parse(entry.file,["DateTimeOriginal","CreateDate"]); const f=d&&(d.DateTimeOriginal||d.CreateDate); if(f instanceof Date){ ex.fecha=`${f.getFullYear()}-${z(f.getMonth()+1)}-${z(f.getDate())}`; ex.hora=`${z(f.getHours())}:${z(f.getMinutes())}`; } }catch(_){}
       try{ const g=await exifr.gps(entry.file); if(g&&typeof g.latitude==="number"){ ex.lat=g.latitude; ex.lon=g.longitude; } }catch(_){}
     }
-    let lugar="";
-    if(ex.lat!=null){ const d=await geocodeThrottled(ex.lat,ex.lon); lugar = d||""; }  // solo dirección legible, nunca coordenada
-    entry.datos = { fecha:ex.fecha, hora:ex.hora, lugar, lat:ex.lat, lon:ex.lon };
-    const texto = [lugar, ex.fecha, ex.hora].filter(Boolean).join("   ·   ");
-    const out = await dibujar(bitmap, texto, $("marca").checked);
-    entry.blob=out.blob; entry.thumb=out.thumb;
-    if(bitmap.close) bitmap.close();
-    entry.status="listo";
+    let lugar=""; if(ex.lat!=null){ const d=await geocodeThrottled(ex.lat,ex.lon); lugar=d||""; }
+    entry.datos={fecha:ex.fecha,hora:ex.hora,lugar,lat:ex.lat,lon:ex.lon};
+    const texto=[lugar,ex.fecha,ex.hora].filter(Boolean).join("   ·   ");
+    const out=await dibujar(bitmap,texto,$("marca").checked);
+    entry.blob=out.blob; entry.thumb=out.thumb; if(bitmap.close)bitmap.close(); entry.status="listo";
   }catch(err){ entry.status=(err&&err.message==="no-decode")?"HEIC no decodificable (usa Safari o JPG)":("error: "+(err&&err.message||err)); }
   renderLista();
 }
-function claveDe(cod){ return `${slug($("cliente").value)}|${slug($("evento").value)}|${cod}`; }
-function calcularNombres(){
-  const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1;
-    e.consec=base+u[e.itemCodigo]; e.filename=`${slug($("cliente").value)}_${slug($("evento").value)}_${e.itemCodigo}_${String(e.consec).padStart(3,"0")}.jpg`; });
-}
+function claveDe(cod){ return `${slug(cfg.cl)}|${slug(cfg.ev)}|${cod}`; }
+function calcularNombres(){ const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}_${String(e.consec).padStart(3,"0")}.jpg`; }); }
 function renderLista(){
-  calcularNombres();
-  const c=$("list"); c.innerHTML="";
+  calcularNombres(); const c=$("list"); c.innerHTML="";
   const listas=batch.filter(e=>e.status==="listo").length;
   $("cnt").textContent = batch.length ? `${listas}/${batch.length} listas` : "Aún no agregas fotos.";
   $("zip").disabled=listas===0; $("enviar").disabled=listas===0;
   batch.forEach(e=>{
-    const opts=items.map(it=>`<option value="${it.codigo}" ${it.codigo===e.itemCodigo?"selected":""}>${it.codigo}${it.req?" · "+it.req.slice(0,26):""}</option>`).join("");
+    const opts=itemsCfg().map(it=>`<option value="${it.codigo}" ${it.codigo===e.itemCodigo?"selected":""}>${it.codigo}${it.req?" · "+it.req.slice(0,26):""}</option>`).join("");
     const d=document.createElement("div"); d.className="ev";
-    d.innerHTML = (e.thumb?`<img src="${e.thumb}">`:`<div style="width:66px;height:66px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">…</div>`)+
-      `<div class="in"><select onchange="cambiarItem(${e.id},this.value)">${opts}</select>
-        <div class="fn">${e.status==="listo"?e.filename:'<span style="color:var(--muted)">'+e.status+'</span>'}</div>
-        <div class="ac">${e.status==="listo"?`<a class="lnk" onclick="descargarUno(${e.id})">descargar</a>`:""}<a class="lnk" onclick="quitar(${e.id})">quitar</a></div></div>`;
+    d.innerHTML=(e.thumb?`<img src="${e.thumb}">`:`<div style="width:66px;height:66px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">…</div>`)+
+      `<div class="in"><select onchange="cambiarItem(${e.id},this.value)">${opts}</select><div class="fn">${e.status==="listo"?e.filename:'<span style="color:var(--muted)">'+e.status+'</span>'}</div>
+       <div class="ac">${e.status==="listo"?`<a class="lnk" onclick="descargarUno(${e.id})">descargar</a>`:""}<a class="lnk" onclick="quitar(${e.id})">quitar</a></div></div>`;
     c.appendChild(d);
   });
 }
@@ -299,45 +293,29 @@ window.quitar=(id)=>{ batch=batch.filter(x=>x.id!==id); renderLista(); };
 window.descargarUno=(id)=>{ const e=batch.find(x=>x.id===id); if(e&&e.blob) bajar(e.blob,e.filename); };
 async function reprocesarTodas(){ for(const e of batch) e.status="procesando"; renderLista(); for(const e of batch) await procesar(e); }
 
-/* ---- empaquetar + enviar/descargar ---- */
 function csvCell(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 let enviando=false;
-async function empaquetarYentregar(enviar){
-  if(enviando) return;                       // candado anti doble-clic / share() en curso
-  const listas=batch.filter(e=>e.status==="listo"); if(!listas.length) return;
+async function empaquetar(enviar){
+  if(enviando) return; const listas=batch.filter(e=>e.status==="listo"); if(!listas.length) return;
   enviando=true; $("enviar").disabled=true; $("zip").disabled=true; $("sendInfo").textContent="Preparando…";
   try{
-    calcularNombres();
-    const zip=new JSZip();
+    calcularNombres(); const zip=new JSZip();
     let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,item,archivo,fecha,hora,lugar,lat,lon\n";
-    listas.forEach(e=>{ zip.file(e.filename, e.blob);
-      csv+=[operador.cedula,operador.nombre,operador.celular,$("cliente").value,$("evento").value,e.itemCodigo,e.filename,
-            e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
-    zip.file("manifiesto.csv", csv);
+    listas.forEach(e=>{ zip.file(e.filename,e.blob); csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,e.itemCodigo,e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
+    zip.file("manifiesto.csv",csv);
     const blob=await zip.generateAsync({type:"blob"});
-    const nombre=`Evidencias_${slug($("cliente").value)}_${slug($("evento").value)}_${slug(operador.cedula)}.zip`;
-    const od=(localStorage.getItem("est_onedrive")||"").trim();
-    let ok=true;
-    if(!enviar){
-      bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado.";
-    } else {
+    const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
+    const od=(localStorage.getItem("est_onedrive")||"").trim(); let ok=true;
+    if(!enviar){ bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado."; }
+    else{
       const file=new File([blob],nombre,{type:"application/zip"});
-      if(navigator.canShare && navigator.canShare({files:[file]})){        // móvil: OneDrive/Teams directo (eliges carpeta y sube)
-        try{ await navigator.share({ files:[file], title:"Evidencias", text:`Operador ${operador.nombre} (${operador.cedula}) · ${$("cliente").value} · ${$("evento").value}` }); $("sendInfo").textContent="Compartido. Elige OneDrive y la carpeta destino."; }
-        catch(err){ ok=false; if(err && err.name!=="AbortError") $("sendInfo").textContent="Envío cancelado."; }
-      } else if(od){                                                        // desktop: el compartir no ofrece OneDrive -> abrir carpeta
-        bajar(blob,nombre);
-        $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado. <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo (Cargar / Upload).';
-      } else {
-        bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado. Define la carpeta OneDrive en Ajustes.";
-      }
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file],title:"Evidencias",text:`Operador ${operador.nombre} (${operador.cedula}) · ${cfg.cl} · ${cfg.ev}`}); $("sendInfo").textContent="Compartido. Elige OneDrive y la carpeta destino."; }
+        catch(err){ ok=false; if(err&&err.name!=="AbortError") $("sendInfo").textContent="Envío cancelado."; }
+      } else if(od){ bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado. <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.'; }
+      else{ bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado. Define la carpeta OneDrive en Ajustes."; }
     }
-    if(ok){
-      const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; });
-      for(const k in cta) counters[k]=(counters[k]||0)+cta[k];
-      saveJSON("est_counters",counters);
-      batch=batch.filter(e=>e.status!=="listo"); renderLista();
-    }
+    if(ok){ const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); }
   } finally { enviando=false; renderLista(); }
 }
 function bajar(blob,nombre){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nombre; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
@@ -347,22 +325,16 @@ let stream=null, facing="environment";
 $("camClose").addEventListener("click", cerrarCamara);
 $("camFlip").addEventListener("click", ()=>{ facing=facing==="environment"?"user":"environment"; abrirStream(); });
 $("camShot").addEventListener("click", capturar);
-async function abrirCamara(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("cap").click(); return; }
-  $("cam").classList.remove("hide");
-  if(!await abrirStream()){ $("cam").classList.add("hide"); $("cap").click(); }
-}
-async function abrirStream(){ try{ if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(_){ return false; } }
-function cerrarCamara(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $("cam").classList.add("hide"); }
-function posActual(){ return new Promise(res=>{ if(!navigator.geolocation) return res(null);
-  navigator.geolocation.getCurrentPosition(p=>res(p.coords), ()=>res(null), {enableHighAccuracy:true,timeout:8000,maximumAge:15000}); }); }
+async function abrirCamara(){ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream()){ $("camm").classList.add("hide"); $("capf").click(); } }
+async function abrirStream(){ try{ if(stream)stream.getTracks().forEach(t=>t.stop()); stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(_){ return false; } }
+function cerrarCamara(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $("camm").classList.add("hide"); }
+function posActual(){ return new Promise(res=>{ if(!navigator.geolocation) return res(null); navigator.geolocation.getCurrentPosition(p=>res(p.coords),()=>res(null),{enableHighAccuracy:true,timeout:8000,maximumAge:15000}); }); }
 async function capturar(){
   const v=$("video"); if(!v.videoWidth) return;
   const c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext("2d").drawImage(v,0,0);
   const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.92));
   $("camhint").textContent="Ubicando…"; const coords=await posActual(); const now=new Date();
-  const meta={ fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`, hora:`${z(now.getHours())}:${z(now.getMinutes())}`, lat:coords?coords.latitude:null, lon:coords?coords.longitude:null };
+  const meta={fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords?coords.latitude:null,lon:coords?coords.longitude:null};
   agregar([new File([blob],"captura.jpg",{type:"image/jpeg"})], meta);
   $("camhint").textContent = coords ? "Capturada. Sigue o cierra." : "Capturada (sin GPS: activa ubicación).";
 }
@@ -377,41 +349,30 @@ async function decodificar(file){
   throw new Error("no-decode");
 }
 function wrap(ctx,t,mw){ const w=t.split(" "),l=[]; let c=""; for(const x of w){ const q=c?c+" "+x:x; if(ctx.measureText(q).width<=mw||!c)c=q; else{ l.push(c); c=x; } } if(c)l.push(c); return l; }
-async function dibujar(bitmap, texto, conMarca){
-  const W=bitmap.width,H=bitmap.height;
-  const cv=document.createElement("canvas"); cv.width=W; cv.height=H; const ctx=cv.getContext("2d"); ctx.drawImage(bitmap,0,0);
+async function dibujar(bitmap,texto,conMarca){
+  const W=bitmap.width,H=bitmap.height; const cv=document.createElement("canvas"); cv.width=W; cv.height=H; const ctx=cv.getContext("2d"); ctx.drawImage(bitmap,0,0);
   if(conMarca && texto){
-    const fpx=Math.max(14,Math.round(H*parseFloat($("esc").value)/100));
-    ctx.font=`700 ${fpx}px Montserrat,-apple-system,sans-serif`;
+    const fpx=Math.max(14,Math.round(H*parseFloat($("esc").value)/100)); ctx.font=`700 ${fpx}px Montserrat,-apple-system,sans-serif`;
     const pad=Math.round(fpx*0.5),mg=Math.round(fpx*0.6),lh=Math.round(fpx*1.32);
-    const lines=wrap(ctx,texto,W-2*mg-2*pad), tw=Math.max(...lines.map(l=>ctx.measureText(l).width));
+    const lines=wrap(ctx,texto,W-2*mg-2*pad),tw=Math.max(...lines.map(l=>ctx.measureText(l).width));
     const bw=tw+2*pad,bh=lines.length*lh+2*pad,pos=$("pos").value;
     let x=(pos==="br"||pos==="tr")?W-bw-mg:mg, y=(pos==="tl"||pos==="tr")?mg:H-bh-mg;
-    ctx.fillStyle="rgba(0,0,0,0.55)"; ctx.fillRect(x,y,bw,bh);
-    ctx.fillStyle=VERDE; ctx.fillRect(x,y,Math.max(4,pad/2),bh);
+    ctx.fillStyle="rgba(0,0,0,0.55)"; ctx.fillRect(x,y,bw,bh); ctx.fillStyle=VERDE; ctx.fillRect(x,y,Math.max(4,pad/2),bh);
     ctx.fillStyle="#fff"; ctx.textBaseline="top"; lines.forEach((l,i)=>ctx.fillText(l,x+pad,y+pad+i*lh+(lh-fpx)/2));
   }
-  const s=Math.min(1,420/Math.max(W,H));
-  const tc=document.createElement("canvas"); tc.width=Math.round(W*s); tc.height=Math.round(H*s); tc.getContext("2d").drawImage(cv,0,0,tc.width,tc.height);
-  const thumb=tc.toDataURL("image/jpeg",0.7);
-  const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.9));
-  return {blob,thumb};
+  const s=Math.min(1,420/Math.max(W,H)); const tc=document.createElement("canvas"); tc.width=Math.round(W*s); tc.height=Math.round(H*s); tc.getContext("2d").drawImage(cv,0,0,tc.width,tc.height);
+  const thumb=tc.toDataURL("image/jpeg",0.7); const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.9)); return {blob,thumb};
 }
-async function geocodeThrottled(lat,lon){
-  const k=lat.toFixed(5)+","+lon.toFixed(5); if(k in geoCache) return geoCache[k];
-  const p=geoChain.then(async()=>{ await sleep(1100); if(k in geoCache) return geoCache[k]; const r=await geocode(lat,lon); geoCache[k]=r; return r; });
-  geoChain=p.catch(()=>{}); return p;
-}
+async function geocodeThrottled(lat,lon){ const k=lat.toFixed(5)+","+lon.toFixed(5); if(k in geoCache) return geoCache[k];
+  const p=geoChain.then(async()=>{ await sleep(1100); if(k in geoCache) return geoCache[k]; const r=await geocode(lat,lon); geoCache[k]=r; return r; }); geoChain=p.catch(()=>{}); return p; }
 async function geocode(lat,lon){
-  try{
-    const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=es`;
+  try{ const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=es`;
     const a=(await (await fetch(url,{headers:{"Accept":"application/json"}})).json()).address||{};
     let road=a.road||a.pedestrian||a.footway,barrio=a.neighbourhood||a.suburb||a.quarter||a.city_district;
     let ciudad=a.city||a.town||a.municipality||a.village,depto=a.state||a.region||a.state_district,pais=a.country;
     if(ciudad)ciudad=ciudad.replace(/^Per[íi]metro Urbano\s+/,""); if(barrio)barrio=barrio.replace(/^Comuna\s+\d+\s*-\s*/,"");
     const p=[]; if(road)p.push(road); if(barrio&&barrio!==ciudad)p.push(barrio); if(ciudad)p.push(ciudad); if(depto&&depto!==ciudad)p.push(depto); if(pais)p.push(pais);
-    return p.join(", ")||null;
-  }catch(_){ return null; }
+    return p.join(", ")||null; }catch(_){ return null; }
 }
 </script>
 </body>
