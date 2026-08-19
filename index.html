@@ -268,7 +268,7 @@ async function procesar(entry){
     entry.datos={fecha:ex.fecha,hora:ex.hora,lugar,lat:ex.lat,lon:ex.lon};
     const texto=[lugar,ex.fecha,ex.hora].filter(Boolean).join("   ·   ");
     const out=await dibujar(bitmap,texto,$("marca").checked);
-    entry.blob=out.blob; entry.thumb=out.thumb; if(bitmap.close)bitmap.close(); entry.status="listo";
+    entry.blob=out.blob; entry.thumb=out.thumb; entry.status="listo";
   }catch(err){ entry.status=(err&&err.message==="no-decode")?"HEIC no decodificable (usa Safari o JPG)":("error: "+(err&&err.message||err)); }
   renderLista();
 }
@@ -340,17 +340,21 @@ async function capturar(){
 }
 
 /* ---- imagen ---- */
+function imgFromBlob(blob){
+  return new Promise((res,rej)=>{ const url=URL.createObjectURL(blob); const img=new Image();
+    img.onload=()=>res(img); img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("img")); }; img.src=url; });
+}
 async function decodificar(file){
   const heic=/heic|heif/i.test(file.type)||/\.hei[cf]$/i.test(file.name);
-  try{ return await createImageBitmap(file,{imageOrientation:"from-image"}); }catch(_){}
-  try{ return await createImageBitmap(file); }catch(_){}
-  try{ const u=URL.createObjectURL(file); const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(0); i.src=u; }); const b=await createImageBitmap(im); URL.revokeObjectURL(u); return b; }catch(_){}
-  if(heic&&typeof heic2any==="function"){ try{ const b=await heic2any({blob:file,toType:"image/jpeg",quality:0.92}); return await createImageBitmap(b); }catch(_){} }
+  try{ return await imgFromBlob(file); }catch(_){}                    // <img> nativo: Safari/iOS decodifican HEIC sin createImageBitmap
+  if(heic&&typeof heic2any==="function"){ try{ const b=await heic2any({blob:file,toType:"image/jpeg",quality:0.92}); return await imgFromBlob(b); }catch(_){} }
   throw new Error("no-decode");
 }
 function wrap(ctx,t,mw){ const w=t.split(" "),l=[]; let c=""; for(const x of w){ const q=c?c+" "+x:x; if(ctx.measureText(q).width<=mw||!c)c=q; else{ l.push(c); c=x; } } if(c)l.push(c); return l; }
-async function dibujar(bitmap,texto,conMarca){
-  const W=bitmap.width,H=bitmap.height; const cv=document.createElement("canvas"); cv.width=W; cv.height=H; const ctx=cv.getContext("2d"); ctx.drawImage(bitmap,0,0);
+async function dibujar(src,texto,conMarca){
+  const W=src.naturalWidth||src.width, H=src.naturalHeight||src.height;
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H; const ctx=cv.getContext("2d"); ctx.drawImage(src,0,0,W,H);
+  if(src&&typeof src.src==="string"&&src.src.indexOf("blob:")===0) URL.revokeObjectURL(src.src);
   if(conMarca && texto){
     const fpx=Math.max(14,Math.round(H*parseFloat($("esc").value)/100)); ctx.font=`700 ${fpx}px Montserrat,-apple-system,sans-serif`;
     const pad=Math.round(fpx*0.5),mg=Math.round(fpx*0.6),lh=Math.round(fpx*1.32);
