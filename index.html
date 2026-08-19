@@ -54,6 +54,9 @@
   .cam .hint{color:#cfd6e0;font-size:12px;text-align:center;padding:7px}
   .cam .bar{display:flex;gap:10px;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:#0e0e0e;border-top:1px solid #26364f} .cam .bar .btn{flex:1}
   .cam .bar .btn.sec{background:transparent;color:#fff;border-color:#4a5a72}
+  .cam .cammode{display:flex;gap:8px;justify-content:center;padding:8px 8px 0}
+  .cam .cammode button{background:rgba(255,255,255,.12);color:#fff;border:1px solid #4a5a72;border-radius:20px;padding:6px 20px;font-family:var(--font);font-weight:700;font-size:13px;cursor:pointer}
+  .cam .cammode button.on{background:var(--oro);color:#10233f;border-color:var(--oro)}
   .modal{position:fixed;inset:0;background:rgba(8,20,40,.55);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
   .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;width:100%;max-width:520px}
 </style>
@@ -135,7 +138,7 @@
       <div class="h" id="ctx"></div>
       <label>Ítem a evidenciar</label>
       <select id="item"></select>
-      <div class="btn2"><button class="btn" id="btnCap">Tomar foto</button><button class="btn" id="btnVid">Grabar video</button></div>
+      <button class="btn" id="btnCap">Capturar (foto o video)</button>
       <button class="btn sec" id="btnGal" style="margin-top:10px">Galería (fotos o videos)</button>
       <input id="capf" type="file" accept="image/*" capture="environment">
       <input id="vidf" type="file" accept="video/*" capture="environment">
@@ -155,7 +158,7 @@
       <div class="list" id="list"></div>
       <div style="height:12px"></div>
       <button class="btn" id="enviar" disabled>Enviar evidencias</button>
-      <div class="btn2"><button class="btn sec" id="zip" disabled>Descargar ZIP</button><button class="btn sec" id="reproc">Re-procesar</button></div>
+      <button class="btn sec" id="zip" disabled style="margin-top:10px">Descargar ZIP</button>
       <div class="mut" id="sendInfo"></div>
     </div>
     <div class="top" style="padding-top:0"><span></span><span class="who"><a class="lnk" id="salir">Cambiar operador</a></span></div>
@@ -185,6 +188,7 @@
 <!-- CÁMARA -->
 <div id="camm" class="cam hide">
   <video id="video" autoplay playsinline muted></video>
+  <div class="cammode"><button id="modoFoto" class="on">Foto</button><button id="modoVideo">Video</button></div>
   <div class="hint" id="camhint">Encuadra la evidencia y captura.</div>
   <div class="bar"><button class="btn sec" id="camClose">Cerrar</button><button class="btn" id="camShot">Capturar</button><button class="btn sec" id="camFlip">Girar</button></div>
 </div>
@@ -329,7 +333,6 @@ function irACaptura(){
 }
 $("gpsEstado").addEventListener("click", pedirUbicacion);
 $("btnCap").addEventListener("click", abrirCamara);
-$("btnVid").addEventListener("click", ()=>{ pedirUbicacion(); $("vidf").click(); });
 $("btnGal").addEventListener("click", ()=>$("gal").click());
 function metaDispositivo(coords){ const now=new Date(); return coords?{fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords.latitude,lon:coords.longitude}:null; }
 $("capf").addEventListener("change", async e=>{ const files=[...e.target.files]; e.target.value=""; const coords=await posActual(); agregar(files, metaDispositivo(coords)); });
@@ -339,7 +342,6 @@ $("gal").addEventListener("change", e=>{ agregar(e.target.files); e.target.value
 $("who").addEventListener("click", ()=>{ if(!operador) return; $("onom").value=operador.nombre; $("oced").value=operador.cedula; $("ocel").value=operador.celular; $("opm").classList.remove("hide"); });
 $("opClose").addEventListener("click", ()=>$("opm").classList.add("hide"));
 $("opSave").addEventListener("click", ()=>{ const n=$("onom").value.trim(),c=$("oced").value.trim(),ce=$("ocel").value.trim(); if(!n||!c||!ce){ alert("Completa nombre, cédula y celular."); return; } operador={nombre:n,cedula:c,celular:ce}; saveJSON("est_operador",operador); pintarWho(); $("opm").classList.add("hide"); renderLista(); });
-$("reproc").addEventListener("click", reprocesarTodas);
 $("zip").addEventListener("click", ()=>empaquetar(false));
 $("enviar").addEventListener("click", ()=>empaquetar(true));
 
@@ -413,14 +415,17 @@ function renderLista(){
 window.cambiarItem=(id,v)=>{ const e=batch.find(x=>x.id===id); if(e){ e.itemCodigo=v; renderLista(); } };
 window.quitar=(id)=>{ batch=batch.filter(x=>x.id!==id); renderLista(); };
 window.descargarUno=(id)=>{ const e=batch.find(x=>x.id===id); if(e&&e.blob) bajar(e.blob,e.filename); };
-async function reprocesarTodas(){ for(const e of batch) e.status="procesando"; renderLista(); for(const e of batch) await procesar(e); }
-/* Re-dibuja SOLO la marca (posición/tamaño/on-off) reusando datos ya obtenidos; no re-hace OCR ni geocodificación. */
+/* Re-dibuja la marca (posición/tamaño/on-off) reusando datos; y si a una foto le faltó la
+   dirección (geocode falló por señal), la reintenta aquí. Reemplaza el antiguo botón Re-procesar. */
 let redibujando=false;
 async function redibujarTodas(){
   if(redibujando) return; redibujando=true;
   try{ for(const e of batch){ if(e.tipo==="video"||e.status!=="listo"||!e.datos) continue;
-    try{ const bmp=await decodificar(e.file); const texto=[e.datos.lugar,e.datos.fecha,e.datos.hora].filter(Boolean).join("   ·   ");
-      const out=await dibujar(bmp,texto,$("marca").checked); e.blob=out.blob; e.thumb=out.thumb; }catch(_){} } }
+    try{
+      if(e.datos.lat!=null && !e.datos.lugar){ const d=await geocodeThrottled(e.datos.lat,e.datos.lon); if(d) e.datos.lugar=d; }
+      const bmp=await decodificar(e.file); const texto=[e.datos.lugar,e.datos.fecha,e.datos.hora].filter(Boolean).join("   ·   ");
+      const out=await dibujar(bmp,texto,$("marca").checked); e.blob=out.blob; e.thumb=out.thumb;
+    }catch(_){} } }
   finally{ redibujando=false; renderLista(); }
 }
 
@@ -454,8 +459,8 @@ async function empaquetar(enviar){
 }
 function bajar(blob,nombre){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nombre; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
 
-/* ---- cámara ---- */
-let stream=null, facing="environment";
+/* ---- cámara (foto/video in-app) ---- */
+let stream=null, facing="environment", modo="foto", mediaRec=null, chunks=[], grabando=false, descartarGrab=false;
 /* GPS single-flight: UNA sola solicitud a la vez (evita el PERMISSION_DENIED espurio de iOS
    por pedir watchPosition + getCurrentPosition al tiempo). Cachea la última posición 2 min. */
 let lastCoords=null, lastCoordsT=0, geoDenied=false, geoBuscando=false, geoPromise=null;
@@ -485,11 +490,33 @@ function pedirUbicacion(){
   });
   return geoPromise; }
 $("camClose").addEventListener("click", cerrarCamara);
-$("camFlip").addEventListener("click", ()=>{ facing=facing==="environment"?"user":"environment"; abrirStream(); });
-$("camShot").addEventListener("click", capturar);
-async function abrirCamara(){ pedirUbicacion(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream()){ $("camm").classList.add("hide"); $("capf").click(); } }
-async function abrirStream(){ try{ if(stream)stream.getTracks().forEach(t=>t.stop()); stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(_){ return false; } }
-function cerrarCamara(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $("camm").classList.add("hide"); }
+$("camFlip").addEventListener("click", ()=>{ if(grabando) return; facing=facing==="environment"?"user":"environment"; abrirStream(modo==="video"); });
+$("camShot").addEventListener("click", ()=>{ if(modo==="foto") capturar(); else if(grabando) detenerGrabacion(); else iniciarGrabacion(); });
+$("modoFoto").addEventListener("click", ()=>{ if(grabando||modo==="foto") return; modo="foto"; setModoUI(); abrirStream(false); });
+$("modoVideo").addEventListener("click", ()=>{ if(grabando||modo==="video") return; modo="video"; setModoUI(); abrirStream(true); });
+function setModoUI(){ $("modoFoto").classList.toggle("on",modo==="foto"); $("modoVideo").classList.toggle("on",modo==="video");
+  const b=$("camShot"); if(modo==="foto"){ b.textContent="Capturar"; b.style.background=""; b.style.color=""; $("camhint").textContent="Encuadra la evidencia y captura."; }
+  else{ b.textContent=grabando?"Detener":"Grabar"; b.style.background=grabando?"#d33":""; b.style.color=grabando?"#fff":""; $("camhint").textContent=grabando?"Grabando… toca Detener":"Toca Grabar para iniciar el video"; } }
+async function abrirCamara(){ pedirUbicacion(); modo="foto"; setModoUI(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream(false)){ $("camm").classList.add("hide"); $("capf").click(); } }
+async function abrirStream(conAudio){ try{ if(stream)stream.getTracks().forEach(t=>t.stop()); stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:!!conAudio}); $("video").srcObject=stream; return true; }
+  catch(_){ if(conAudio){ try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(__){} } return false; } }
+function iniciarGrabacion(){
+  if(!window.MediaRecorder||!stream){ cerrarCamara(); $("vidf").click(); return; }   // respaldo: cámara nativa
+  chunks=[]; let mr=null; for(const t of ["video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"]){ try{ if(!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t)){ mr=new MediaRecorder(stream,{mimeType:t}); break; } }catch(_){} }
+  if(!mr){ try{ mr=new MediaRecorder(stream); }catch(_){ cerrarCamara(); $("vidf").click(); return; } }
+  mediaRec=mr; descartarGrab=false;
+  mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  mr.onstop=async()=>{ grabando=false;
+    if(descartarGrab){ descartarGrab=false; return; }
+    const type=(mr.mimeType||"video/mp4").split(";")[0]; const ext=/mp4/.test(type)?"mp4":(/webm/.test(type)?"webm":"mp4");
+    const blob=new Blob(chunks,{type}); const coords=(gpsFresco()?lastCoords:await posActual()); const now=new Date();
+    const meta=coords?{fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords.latitude,lon:coords.longitude}:null;
+    agregar([new File([blob],"video."+ext,{type})], meta); cerrarCamara();
+  };
+  pedirUbicacion(); mr.start(); grabando=true; setModoUI();
+}
+function detenerGrabacion(){ if(mediaRec&&grabando){ try{ mediaRec.stop(); }catch(_){ grabando=false; } } }
+function cerrarCamara(){ if(grabando){ descartarGrab=true; try{ mediaRec.stop(); }catch(_){} grabando=false; } if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $("camm").classList.add("hide"); }
 function posActual(){ return pedirUbicacion(); }
 async function capturar(){
   const v=$("video"); if(!v.videoWidth) return;
@@ -530,8 +557,8 @@ async function dibujar(src,texto,conMarca){
   const s=Math.min(1,420/Math.max(W,H)); const tc=document.createElement("canvas"); tc.width=Math.round(W*s); tc.height=Math.round(H*s); tc.getContext("2d").drawImage(cv,0,0,tc.width,tc.height);
   const thumb=tc.toDataURL("image/jpeg",0.7); const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.9)); return {blob,thumb};
 }
-async function geocodeThrottled(lat,lon){ const k=lat.toFixed(5)+","+lon.toFixed(5); if(k in geoCache) return geoCache[k];
-  const p=geoChain.then(async()=>{ await sleep(1100); if(k in geoCache) return geoCache[k]; const r=await geocode(lat,lon); geoCache[k]=r; return r; }); geoChain=p.catch(()=>{}); return p; }
+async function geocodeThrottled(lat,lon){ const k=lat.toFixed(5)+","+lon.toFixed(5); if(geoCache[k]) return geoCache[k];
+  const p=geoChain.then(async()=>{ await sleep(1100); if(geoCache[k]) return geoCache[k]; const r=await geocode(lat,lon); if(r) geoCache[k]=r; return r; }); geoChain=p.catch(()=>{}); return p; }
 async function geocode(lat,lon){
   try{ const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=es`;
     const a=(await (await fetch(url,{headers:{"Accept":"application/json"}})).json()).address||{};
