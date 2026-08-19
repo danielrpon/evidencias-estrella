@@ -19,7 +19,7 @@
   .h{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--azul);margin-bottom:10px}
   .role{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--oro-d);margin-bottom:4px}
   label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;font-weight:600;letter-spacing:.3px}
-  input,select{width:100%;background:var(--field);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:11px;font-size:15px;font-family:var(--font)}
+  input,select{width:100%;min-width:0;background:var(--field);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:11px;font-size:15px;font-family:var(--font)}
   input:focus,select:focus{outline:none;border-color:var(--azul)}
   .fld+.fld{margin-top:10px} .row{display:flex;gap:10px} .row>*{flex:1;min-width:0} .row .fld+.fld{margin-top:0}
   .btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font);background:var(--oro);color:#10233f}
@@ -81,10 +81,8 @@
         <div class="fld"><label>Cliente</label><input id="ecliente" type="text" autocomplete="off"></div>
         <div class="fld"><label>Evento</label><input id="eevento" type="text" autocomplete="off"></div>
       </div>
-      <div class="row" style="margin-top:10px">
-        <div class="fld"><label>Fecha del evento</label><input id="efecha" type="date"></div>
-        <div class="fld"><label>Ciudad</label><input id="eciudad" type="text" autocomplete="off"></div>
-      </div>
+      <div class="fld" style="margin-top:10px"><label>Fecha del evento</label><input id="efecha" type="date"></div>
+      <div class="fld"><label>Ciudad</label><input id="eciudad" type="text" autocomplete="off"></div>
       <div style="height:14px"></div>
       <button class="btn sec" id="ebtnReq">Cargar lista de evidencias (Excel / CSV)</button>
       <input id="efileReq" type="file" accept=".xlsx,.xls,.csv">
