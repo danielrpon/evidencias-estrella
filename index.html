@@ -83,7 +83,7 @@
       <div style="height:14px"></div>
       <button class="btn" id="egen" disabled>Generar acceso para operadores</button>
       <div id="acWrap" class="hide">
-        <div class="qrbox"><canvas id="acQR"></canvas></div>
+        <div class="qrbox"><div id="acQR"></div></div>
         <div class="mut" style="text-align:center">Los operadores escanean este código para entrar.</div>
         <div style="height:10px"></div>
         <label>Enlace de acceso</label><input id="acLink" type="text" readonly>
@@ -157,7 +157,7 @@
 <script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const VERDE = "#F2B21A";   // acento dorado Estrella en la marca de agua
@@ -228,7 +228,9 @@ function generarAcceso(){
   saveConfigDesdeExec();
   const link = location.origin+location.pathname+"#c="+encodeURIComponent(encCfg(cfg));
   $("acLink").value = link; $("acWrap").classList.remove("hide"); $("acCopy").textContent="Copiar enlace";
-  if(window.QRCode){ try{ QRCode.toCanvas($("acQR"), link, {width:220,margin:1,color:{dark:"#0B4EA2",light:"#ffffff"}}, ()=>{}); }catch(_){} }
+  $("acQR").innerHTML="";
+  if(window.QRCode){ try{ new QRCode($("acQR"), {text:link, width:220, height:220, colorDark:"#0B4EA2", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.L}); }
+    catch(e){ $("acQR").innerHTML='<div class="mut">La lista es muy larga para el QR; comparte el enlace de abajo.</div>'; } }
 }
 
 /* ---- OPERADOR: login ---- */
