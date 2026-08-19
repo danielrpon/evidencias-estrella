@@ -15,6 +15,7 @@
   .hdin{max-width:640px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left))}
   .hd .logo{height:32px;max-width:60%;object-fit:contain;display:block}
   .hd .r{font-size:12px;color:#cfe0f5;text-align:right;flex:none} .hd .r a{color:#fff;text-decoration:none;font-weight:700;white-space:nowrap}
+  .hd .r #who{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .wrap{max-width:640px;margin:0 auto;padding:14px;padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right))}
   @media(min-width:820px){ .wrap{padding-top:20px} }
   .who{font-size:12px;color:var(--muted)} .who a{color:var(--azul);text-decoration:none;font-weight:600}
@@ -134,9 +135,11 @@
       <div class="h" id="ctx"></div>
       <label>Ítem a evidenciar</label>
       <select id="item"></select>
-      <div class="btn2"><button class="btn" id="btnCap">Tomar foto</button><button class="btn sec" id="btnGal">Galería</button></div>
+      <div class="btn2"><button class="btn" id="btnCap">Tomar foto</button><button class="btn" id="btnVid">Grabar video</button></div>
+      <button class="btn sec" id="btnGal" style="margin-top:10px">Galería (fotos o videos)</button>
       <input id="capf" type="file" accept="image/*" capture="environment">
-      <input id="gal" type="file" accept="image/*" multiple>
+      <input id="vidf" type="file" accept="video/*" capture="environment">
+      <input id="gal" type="file" accept="image/*,video/*" multiple>
       <div class="mut" id="gpsEstado" style="margin-top:6px;cursor:pointer"><b>Toca aquí para activar la ubicación.</b></div>
       <div class="opts">
         <div class="row">
@@ -166,6 +169,17 @@
   <div class="mut">Aquí llegan las evidencias al Enviar. En móvil se ofrece OneDrive/Teams directamente.</div>
   <div style="height:14px"></div>
   <div class="btn2"><button class="btn sec" id="cfgClose">Cerrar</button><button class="btn" id="cfgSave">Guardar</button></div>
+</div></div>
+
+<!-- EDITAR OPERADOR -->
+<div id="opm" class="modal hide"><div class="sheet">
+  <div class="h">Editar operador</div>
+  <div class="fld"><label>Nombre completo</label><input id="onom" type="text" autocomplete="off"></div>
+  <div class="fld"><label>Cédula</label><input id="oced" type="text" inputmode="numeric" autocomplete="off"></div>
+  <div class="fld"><label>Celular</label><input id="ocel" type="text" inputmode="tel" autocomplete="off"></div>
+  <div class="mut">La cédula y el nombre forman el identificador del operador en el nombre de cada evidencia.</div>
+  <div style="height:12px"></div>
+  <div class="btn2"><button class="btn sec" id="opClose">Cerrar</button><button class="btn" id="opSave">Guardar</button></div>
 </div></div>
 
 <!-- CÁMARA -->
@@ -315,11 +329,16 @@ function irACaptura(){
 }
 $("gpsEstado").addEventListener("click", pedirUbicacion);
 $("btnCap").addEventListener("click", abrirCamara);
+$("btnVid").addEventListener("click", ()=>{ pedirUbicacion(); $("vidf").click(); });
 $("btnGal").addEventListener("click", ()=>$("gal").click());
-$("capf").addEventListener("change", async e=>{ const files=[...e.target.files]; e.target.value=""; const coords=await posActual(); const now=new Date();
-  const meta=coords?{fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords.latitude,lon:coords.longitude}:null;
-  agregar(files, meta); });
+function metaDispositivo(coords){ const now=new Date(); return coords?{fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords.latitude,lon:coords.longitude}:null; }
+$("capf").addEventListener("change", async e=>{ const files=[...e.target.files]; e.target.value=""; const coords=await posActual(); agregar(files, metaDispositivo(coords)); });
+$("vidf").addEventListener("change", async e=>{ const files=[...e.target.files]; e.target.value=""; const coords=await posActual(); agregar(files, metaDispositivo(coords)); });
 $("gal").addEventListener("change", e=>{ agregar(e.target.files); e.target.value=""; });
+["pos","esc","marca"].forEach(id=>$(id).addEventListener("change", redibujarTodas));   /* auto-refresh de la marca */
+$("who").addEventListener("click", ()=>{ if(!operador) return; $("onom").value=operador.nombre; $("oced").value=operador.cedula; $("ocel").value=operador.celular; $("opm").classList.remove("hide"); });
+$("opClose").addEventListener("click", ()=>$("opm").classList.add("hide"));
+$("opSave").addEventListener("click", ()=>{ const n=$("onom").value.trim(),c=$("oced").value.trim(),ce=$("ocel").value.trim(); if(!n||!c||!ce){ alert("Completa nombre, cédula y celular."); return; } operador={nombre:n,cedula:c,celular:ce}; saveJSON("est_operador",operador); pintarWho(); $("opm").classList.add("hide"); renderLista(); });
 $("reproc").addEventListener("click", reprocesarTodas);
 $("zip").addEventListener("click", ()=>empaquetar(false));
 $("enviar").addEventListener("click", ()=>empaquetar(true));
@@ -333,11 +352,30 @@ $("cfgSave").addEventListener("click", ()=>{ localStorage.setItem("est_onedrive"
 /* ---- lote ---- */
 function agregar(fileList, meta){
   const cod=$("item").value;
-  [...fileList].forEach(file=>{ const e={id:++seq,file,itemCodigo:cod,status:"procesando",blob:null,thumb:"",datos:{},filename:"",meta:meta||null}; batch.push(e); procesar(e); });
+  [...fileList].forEach(file=>{
+    const video=/^video\//.test(file.type)||/\.(mp4|mov|m4v|3gp|webm|avi|mkv)$/i.test(file.name);
+    const ext=video?((file.name.split(".").pop()||"mp4").toLowerCase()):"jpg";
+    const e={id:++seq,file,itemCodigo:cod,tipo:video?"video":"foto",ext,status:"procesando",blob:null,thumb:"",datos:{},filename:"",meta:meta||null};
+    batch.push(e); procesar(e); });
   renderLista();
 }
+function videoThumb(file){ return new Promise(res=>{
+  try{ const v=document.createElement("video"); v.preload="metadata"; v.muted=true; v.playsInline=true;
+    const url=URL.createObjectURL(file); let hecho=false; const done=d=>{ if(hecho) return; hecho=true; URL.revokeObjectURL(url); res(d||""); };
+    v.onloadeddata=()=>{ try{ v.currentTime=Math.min(0.1,(v.duration||1)/2); }catch(_){ done(""); } };
+    v.onseeked=()=>{ try{ const s=Math.min(1,420/Math.max(v.videoWidth||120,v.videoHeight||120)); const c=document.createElement("canvas"); c.width=Math.round((v.videoWidth||120)*s); c.height=Math.round((v.videoHeight||120)*s); c.getContext("2d").drawImage(v,0,0,c.width,c.height); done(c.toDataURL("image/jpeg",0.6)); }catch(_){ done(""); } };
+    v.onerror=()=>done(""); setTimeout(()=>done(""),4000); v.src=url;
+  }catch(_){ res(""); }
+}); }
 async function procesar(entry){
   try{
+    if(entry.tipo==="video"){
+      const m=entry.meta||{};
+      let lugar=""; if(m.lat!=null){ const d=await geocodeThrottled(m.lat,m.lon); lugar=d||""; }
+      entry.datos={fecha:m.fecha||"",hora:m.hora||"",lugar,lat:(m.lat!=null?m.lat:null),lon:(m.lon!=null?m.lon:null)};
+      entry.thumb=await videoThumb(entry.file); entry.blob=entry.file;   // el video va sin marca (sin re-encode)
+      entry.status="listo"; renderLista(); return;
+    }
     const bitmap=await decodificar(entry.file);
     let ex;
     if(entry.meta){ ex={fecha:entry.meta.fecha||"",hora:entry.meta.hora||"",lat:entry.meta.lat,lon:entry.meta.lon}; }
@@ -354,16 +392,19 @@ async function procesar(entry){
   renderLista();
 }
 function claveDe(cod){ return `${slug(cfg.cl)}|${slug(cfg.ev)}|${cod}`; }
-function calcularNombres(){ const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag(); e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}_${String(e.consec).padStart(3,"0")}.jpg`; }); }
+function calcularNombres(){ const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag(); e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}_${String(e.consec).padStart(3,"0")}.${e.ext||"jpg"}`; }); }
 function renderLista(){
   calcularNombres(); const c=$("list"); c.innerHTML="";
   const listas=batch.filter(e=>e.status==="listo").length;
-  $("cnt").textContent = batch.length ? `${listas}/${batch.length} listas` : "Aún no agregas fotos.";
+  $("cnt").textContent = batch.length ? `${listas}/${batch.length} listas` : "Aún no agregas evidencias.";
   $("zip").disabled=listas===0; $("enviar").disabled=listas===0;
   batch.forEach(e=>{
     const opts=itemsCfg().map(it=>`<option value="${it.codigo}" ${it.codigo===e.itemCodigo?"selected":""}>${it.codigo}${it.req?" · "+it.req.slice(0,26):""}</option>`).join("");
     const d=document.createElement("div"); d.className="ev";
-    d.innerHTML=(e.thumb?`<img src="${e.thumb}">`:`<div style="width:66px;height:66px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">…</div>`)+
+    const badge=e.tipo==="video"?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:22px;text-shadow:0 1px 4px #000">▶</span>`:"";
+    const thumbHtml=e.thumb?`<div style="position:relative;flex:none;width:66px;height:66px"><img src="${e.thumb}" style="width:66px;height:66px;object-fit:cover;border-radius:7px;background:#000">${badge}</div>`
+      :`<div style="width:66px;height:66px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;background:#f0f0f0;border-radius:7px">${e.tipo==="video"?"▶":"…"}</div>`;
+    d.innerHTML=thumbHtml+
       `<div class="in"><select onchange="cambiarItem(${e.id},this.value)">${opts}</select><div class="fn">${e.status==="listo"?e.filename:'<span style="color:var(--muted)">'+e.status+'</span>'}</div>
        <div class="ac">${e.status==="listo"?`<a class="lnk" onclick="descargarUno(${e.id})">descargar</a>`:""}<a class="lnk" onclick="quitar(${e.id})">quitar</a></div></div>`;
     c.appendChild(d);
@@ -373,6 +414,15 @@ window.cambiarItem=(id,v)=>{ const e=batch.find(x=>x.id===id); if(e){ e.itemCodi
 window.quitar=(id)=>{ batch=batch.filter(x=>x.id!==id); renderLista(); };
 window.descargarUno=(id)=>{ const e=batch.find(x=>x.id===id); if(e&&e.blob) bajar(e.blob,e.filename); };
 async function reprocesarTodas(){ for(const e of batch) e.status="procesando"; renderLista(); for(const e of batch) await procesar(e); }
+/* Re-dibuja SOLO la marca (posición/tamaño/on-off) reusando datos ya obtenidos; no re-hace OCR ni geocodificación. */
+let redibujando=false;
+async function redibujarTodas(){
+  if(redibujando) return; redibujando=true;
+  try{ for(const e of batch){ if(e.tipo==="video"||e.status!=="listo"||!e.datos) continue;
+    try{ const bmp=await decodificar(e.file); const texto=[e.datos.lugar,e.datos.fecha,e.datos.hora].filter(Boolean).join("   ·   ");
+      const out=await dibujar(bmp,texto,$("marca").checked); e.blob=out.blob; e.thumb=out.thumb; }catch(_){} } }
+  finally{ redibujando=false; renderLista(); }
+}
 
 function csvCell(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 let enviando=false;
@@ -381,8 +431,8 @@ async function empaquetar(enviar){
   enviando=true; $("enviar").disabled=true; $("zip").disabled=true; $("sendInfo").textContent="Preparando…";
   try{
     calcularNombres(); const zip=new JSZip();
-    let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,evento_fecha,evento_ciudad,item,cantidad,archivo,fecha,hora,lugar,lat,lon\n";
-    listas.forEach(e=>{ zip.file(e.filename,e.blob); csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,cfg.fe||"",cfg.ci||"",e.itemCodigo,itemCant(e.itemCodigo),e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
+    let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,evento_fecha,evento_ciudad,item,cantidad,tipo,archivo,fecha,hora,lugar,lat,lon\n";
+    listas.forEach(e=>{ zip.file(e.filename,e.blob); csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,cfg.fe||"",cfg.ci||"",e.itemCodigo,itemCant(e.itemCodigo),e.tipo||"foto",e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
     zip.file("manifiesto.csv",csv);
     const blob=await zip.generateAsync({type:"blob"});
     const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
@@ -390,11 +440,14 @@ async function empaquetar(enviar){
     if(!enviar){ bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado."; }
     else{
       const file=new File([blob],nombre,{type:"application/zip"});
+      const bajarConGuia=()=>{ bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); };
       if(navigator.canShare && navigator.canShare({files:[file]})){
         try{ await navigator.share({files:[file],title:"Evidencias",text:`Operador ${operador.nombre} (${operador.cedula}) · ${cfg.cl} · ${cfg.ev}`}); $("sendInfo").textContent="Compartido. Elige OneDrive y la carpeta destino."; }
-        catch(err){ ok=false; if(err&&err.name!=="AbortError") $("sendInfo").textContent="Envío cancelado."; }
-      } else if(od){ bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado. <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.'; }
-      else{ bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado. Define la carpeta OneDrive en Ajustes."; }
+        catch(err){
+          if(err&&err.name==="AbortError"){ ok=false; $("sendInfo").textContent="Envío cancelado. Puedes reintentar o usar «Descargar ZIP»."; }
+          else{ bajarConGuia(); }   // Android suele fallar el share tras el await (gesto expirado) -> respaldo: descargar
+        }
+      } else { bajarConGuia(); }
     }
     if(ok){ const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); }
   } finally { enviando=false; renderLista(); }
@@ -445,9 +498,8 @@ async function capturar(){
   $("camhint").textContent="Ubicando…"; const coords=await posActual(); const now=new Date();
   const meta={fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords?coords.latitude:null,lon:coords?coords.longitude:null};
   agregar([new File([blob],"captura.jpg",{type:"image/jpeg"})], meta);
-  $("camhint").textContent = coords ? "Capturada con ubicación ✓. Sigue o cierra."
-    : (geoDenied ? "Capturada SIN GPS: Safari bloqueó la ubicación. Cierra todas las pestañas, reabre el enlace y toca Permitir."
-                 : "Capturada SIN GPS: aún sin señal. Espera unos segundos y reintenta.");
+  cerrarCamara();   // salir a la vista de clasificación tras cada foto
+  $("sendInfo").textContent = coords ? "" : (geoDenied ? "Última foto SIN GPS: toca «Toca aquí para activar la ubicación»." : "Última foto SIN GPS: aún sin señal, reintenta.");
 }
 
 /* ---- imagen ---- */
