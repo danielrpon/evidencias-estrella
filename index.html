@@ -82,11 +82,9 @@
     <div class="card">
       <div class="role">Ejecutivo de cuenta</div>
       <div class="h">Configurar operación</div>
-      <div class="row">
-        <div class="fld"><label>Cliente</label><input id="ecliente" type="text" autocomplete="off"></div>
-        <div class="fld"><label>Evento</label><input id="eevento" type="text" autocomplete="off"></div>
-      </div>
-      <div class="fld" style="margin-top:10px"><label>Fecha del evento</label><input id="efecha" type="date"></div>
+      <div class="fld"><label>Cliente</label><input id="ecliente" type="text" autocomplete="off"></div>
+      <div class="fld"><label>Evento</label><input id="eevento" type="text" autocomplete="off"></div>
+      <div class="fld"><label>Fecha del evento</label><input id="efecha" type="date"></div>
       <div class="fld"><label>Ciudad</label><input id="eciudad" type="text" autocomplete="off"></div>
       <div style="height:14px"></div>
       <button class="btn sec" id="ebtnReq">Cargar lista de evidencias (Excel / CSV)</button>
@@ -305,8 +303,8 @@ $("lentrar").addEventListener("click", ()=>{
   if(!o.nombre||!o.cedula||!o.celular){ alert("Completa nombre, cédula y celular."); return; }
   operador=o; saveJSON("est_operador",o); pintarWho(); irACaptura();
 });
-$("reconfig").addEventListener("click", ()=>{ detenerUbicacion(); prefillExec(); show("exec"); });
-$("salir").addEventListener("click", ()=>{ detenerUbicacion(); if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; } show("login"); });
+$("reconfig").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
+$("salir").addEventListener("click", ()=>{ if(operador){ $("lnom").value=operador.nombre; $("lced").value=operador.cedula; $("lcel").value=operador.celular; } show("login"); });
 
 /* ---- OPERADOR: captura ---- */
 function irACaptura(){
@@ -405,46 +403,41 @@ function bajar(blob,nombre){ const a=document.createElement("a"); a.href=URL.cre
 
 /* ---- cámara ---- */
 let stream=null, facing="environment";
-let geoWatch=null, lastCoords=null, lastCoordsT=0, geoDenied=false;
-function gpsFresco(){ return lastCoords && (Date.now()-lastCoordsT)<45000; }
-function fijarPos(coords){ lastCoords=coords; lastCoordsT=Date.now(); geoDenied=false; actualizarEstadoGPS(); }
+/* GPS single-flight: UNA sola solicitud a la vez (evita el PERMISSION_DENIED espurio de iOS
+   por pedir watchPosition + getCurrentPosition al tiempo). Cachea la última posición 2 min. */
+let lastCoords=null, lastCoordsT=0, geoDenied=false, geoBuscando=false, geoPromise=null;
+function gpsFresco(){ return lastCoords && (Date.now()-lastCoordsT)<120000; }
+function fijarPos(coords){ lastCoords=coords; lastCoordsT=Date.now(); geoDenied=false; geoBuscando=false; actualizarEstadoGPS(); }
 function actualizarEstadoGPS(){ const el=$("gpsEstado"); if(!el) return;
   if(gpsFresco()){ el.textContent="Ubicación lista ✓"; el.style.color="#1a7f37"; }
-  else if(geoDenied){ el.innerHTML="Ubicación bloqueada. Actívala en Ajustes → Safari → Ubicación (y no uses navegación privada). <b>Toca para reintentar.</b>"; el.style.color="#b3261e"; }
-  else if(geoWatch!=null){ el.textContent="Buscando ubicación…"; el.style.color="var(--muted)"; }
+  else if(geoBuscando){ el.textContent="Buscando ubicación…"; el.style.color="var(--muted)"; }
+  else if(geoDenied){ el.innerHTML="Ubicación bloqueada por Safari. Cierra TODAS las pestañas de esta página, vuelve a abrir el enlace y toca <b>Permitir</b> cuando pregunte. <b>Toca aquí para reintentar.</b>"; el.style.color="#b3261e"; }
   else { el.innerHTML="<b>Toca aquí para activar la ubicación.</b>"; el.style.color="var(--azul)"; } }
-function iniciarUbicacion(){ if(!navigator.geolocation||geoWatch!=null) return;
-  geoWatch=navigator.geolocation.watchPosition(
-    p=>fijarPos(p.coords),
-    err=>{ if(err&&err.code===1){ geoDenied=true; } actualizarEstadoGPS(); },
-    {enableHighAccuracy:true, timeout:20000, maximumAge:30000});
-  actualizarEstadoGPS(); }
-function detenerUbicacion(){ if(geoWatch!=null){ navigator.geolocation.clearWatch(geoWatch); geoWatch=null; } }
-/* Petición explícita (gesto del usuario): alta precisión y, si falla, baja precisión (más rápida por wifi/celda) */
-function pedirUbicacion(){ if(!navigator.geolocation) return;
-  iniciarUbicacion();
-  const el=$("gpsEstado"); if(el&&!gpsFresco()){ el.textContent="Buscando ubicación…"; el.style.color="var(--muted)"; }
-  navigator.geolocation.getCurrentPosition(p=>fijarPos(p.coords),
-    err=>{ if(err&&err.code===1){ geoDenied=true; actualizarEstadoGPS(); return; }
-      navigator.geolocation.getCurrentPosition(p2=>fijarPos(p2.coords), ()=>actualizarEstadoGPS(), {enableHighAccuracy:false, timeout:10000, maximumAge:60000}); },
-    {enableHighAccuracy:true, timeout:12000, maximumAge:30000}); }
+/* Una única petición encadenada: alta precisión y, si falla por señal, baja precisión (wifi/celda). */
+function pedirUbicacion(){
+  if(!navigator.geolocation) return Promise.resolve(null);
+  if(gpsFresco()) return Promise.resolve(lastCoords);
+  if(geoPromise) return geoPromise;             // ya hay una en curso → reusar (single-flight)
+  geoBuscando=true; geoDenied=false; actualizarEstadoGPS();
+  geoPromise = new Promise(res=>{
+    const fin=coords=>{ geoPromise=null; if(coords){ fijarPos(coords); } else { geoBuscando=false; actualizarEstadoGPS(); } res(coords||lastCoords||null); };
+    navigator.geolocation.getCurrentPosition(
+      p=>fin(p.coords),
+      err=>{ if(err&&err.code===1){ geoDenied=true; fin(null); return; }   // permiso denegado real
+        navigator.geolocation.getCurrentPosition(
+          p2=>fin(p2.coords),
+          err2=>{ if(err2&&err2.code===1) geoDenied=true; fin(null); },
+          {enableHighAccuracy:false, timeout:12000, maximumAge:120000}); },
+      {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
+  });
+  return geoPromise; }
 $("camClose").addEventListener("click", cerrarCamara);
 $("camFlip").addEventListener("click", ()=>{ facing=facing==="environment"?"user":"environment"; abrirStream(); });
 $("camShot").addEventListener("click", capturar);
-async function abrirCamara(){ iniciarUbicacion(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream()){ $("camm").classList.add("hide"); $("capf").click(); } }
+async function abrirCamara(){ pedirUbicacion(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream()){ $("camm").classList.add("hide"); $("capf").click(); } }
 async function abrirStream(){ try{ if(stream)stream.getTracks().forEach(t=>t.stop()); stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(_){ return false; } }
 function cerrarCamara(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } $("camm").classList.add("hide"); }
-function posActual(){ return new Promise(res=>{
-  if(gpsFresco()) return res(lastCoords);
-  if(!navigator.geolocation) return res(lastCoords||null);
-  navigator.geolocation.getCurrentPosition(
-    p=>{ fijarPos(p.coords); res(p.coords); },
-    err=>{ if(err&&err.code===1){ geoDenied=true; actualizarEstadoGPS(); return res(lastCoords||null); }
-      navigator.geolocation.getCurrentPosition(
-        p2=>{ fijarPos(p2.coords); res(p2.coords); },
-        ()=>res(lastCoords||null),
-        {enableHighAccuracy:false, timeout:9000, maximumAge:60000}); },
-    {enableHighAccuracy:true, timeout:12000, maximumAge:30000}); }); }
+function posActual(){ return pedirUbicacion(); }
 async function capturar(){
   const v=$("video"); if(!v.videoWidth) return;
   const c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext("2d").drawImage(v,0,0);
@@ -453,7 +446,7 @@ async function capturar(){
   const meta={fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`,hora:`${z(now.getHours())}:${z(now.getMinutes())}`,lat:coords?coords.latitude:null,lon:coords?coords.longitude:null};
   agregar([new File([blob],"captura.jpg",{type:"image/jpeg"})], meta);
   $("camhint").textContent = coords ? "Capturada con ubicación ✓. Sigue o cierra."
-    : (geoDenied ? "Capturada SIN GPS: permiso bloqueado (Ajustes → Safari → Ubicación; sin modo privado)."
+    : (geoDenied ? "Capturada SIN GPS: Safari bloqueó la ubicación. Cierra todas las pestañas, reabre el enlace y toca Permitir."
                  : "Capturada SIN GPS: aún sin señal. Espera unos segundos y reintenta.");
 }
 
