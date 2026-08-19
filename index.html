@@ -38,7 +38,7 @@
   .ev .in{flex:1;min-width:0} .ev .fn{font-family:var(--mono);font-size:11px;color:var(--azul-d);word-break:break-all;margin-top:4px}
   .ev select{padding:6px 8px;font-size:12.5px} .ev .ac{display:flex;gap:12px;margin-top:5px}
   .cnt{font-size:12px;color:var(--muted);margin:0 0 9px}
-  .qrbox{text-align:center;margin-top:12px} .qrbox canvas{background:#fff;border-radius:10px;padding:8px;border:1px solid var(--line)}
+  .qrbox{display:flex;justify-content:center;margin-top:12px} .qrbox canvas,.qrbox img{background:#fff;border-radius:10px;padding:8px;border:1px solid var(--line);display:block}
   .hide{display:none!important}
   .cam{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column}
   .cam video{flex:1;width:100%;min-height:0;object-fit:cover;background:#000}
@@ -76,10 +76,22 @@
         <div class="fld"><label>Cliente</label><input id="ecliente" type="text" autocomplete="off"></div>
         <div class="fld"><label>Evento</label><input id="eevento" type="text" autocomplete="off"></div>
       </div>
-      <div style="height:12px"></div>
+      <div class="row" style="margin-top:10px">
+        <div class="fld"><label>Fecha del evento</label><input id="efecha" type="date"></div>
+        <div class="fld"><label>Ciudad</label><input id="eciudad" type="text" autocomplete="off"></div>
+      </div>
+      <div style="height:14px"></div>
       <button class="btn sec" id="ebtnReq">Cargar lista de evidencias (Excel / CSV)</button>
       <input id="efileReq" type="file" accept=".xlsx,.xls,.csv">
-      <div class="mut" id="ereqInfo">Columnas: item_codigo · requerimiento (evento/cliente/ciudad opcionales)</div>
+      <div class="mut" id="ereqInfo">Carga un Excel/CSV o agrega manualmente. Columnas: item_codigo · requerimiento · cantidad</div>
+      <div class="h" style="margin-top:14px">Agregar evidencia manualmente</div>
+      <div class="fld"><label>Requerimiento</label><input id="mireq" type="text" autocomplete="off" placeholder="Ej.: Sistema de sonido"></div>
+      <div class="row" style="margin-top:8px">
+        <div class="fld"><label>Código</label><input id="micod" type="text" autocomplete="off" placeholder="01"></div>
+        <div class="fld"><label>Cantidad</label><input id="micant" type="number" min="1" placeholder="1"></div>
+      </div>
+      <button class="btn sec" id="miadd" style="margin-top:8px">Agregar a la lista</button>
+      <div id="execList" class="list" style="margin-top:10px"></div>
       <div style="height:14px"></div>
       <button class="btn" id="egen" disabled>Generar acceso para operadores</button>
       <div id="acWrap" class="hide">
@@ -161,6 +173,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const VERDE = "#F2B21A";   // acento dorado Estrella en la marca de agua
+const PROD = "https://danielrpon.github.io/evidencias-estrella/";  // el QR/enlace SIEMPRE apunta a la app publicada (no a file://)
 let cfg = null;              // {cl, ev, it:[{codigo,req}], od}
 let operador = loadJSON("est_operador", null);
 let counters = loadJSON("est_counters", {});
@@ -203,7 +216,20 @@ $("acCopy").addEventListener("click", ()=>{ navigator.clipboard && navigator.cli
 $("acGo").addEventListener("click", ()=>{ saveConfigDesdeExec(); irALogin(); });
 $("goExec").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
 $("goOper").addEventListener("click", ()=>{ if(cfg) irALogin(); else $("homeHint").textContent="Aún no hay una operación configurada en este dispositivo. Pide el enlace o QR de acceso a tu ejecutivo."; });
-function prefillExec(){ if(cfg){ $("ecliente").value=cfg.cl||""; $("eevento").value=cfg.ev||""; execItems=itemsCfg().slice(); $("ereqInfo").textContent=execItems.length+" evidencias cargadas."; chequearGen(); } }
+$("miadd").addEventListener("click", ()=>{ const codigo=$("micod").value.trim(), req=$("mireq").value.trim(), cant=$("micant").value.trim();
+  if(!codigo){ alert("Escribe el código del ítem (ej. 01)."); return; }
+  execItems.push({codigo,req,cant}); $("micod").value=""; $("mireq").value=""; $("micant").value=""; renderExecItems(); $("mireq").focus(); });
+function prefillExec(){ if(cfg){ $("ecliente").value=cfg.cl||""; $("eevento").value=cfg.ev||""; $("efecha").value=cfg.fe||""; $("eciudad").value=cfg.ci||""; execItems=itemsCfg().map(i=>({codigo:i.codigo,req:i.req,cant:i.cant||""})); renderExecItems(); } }
+function renderExecItems(){
+  const c=$("execList"); c.innerHTML="";
+  execItems.forEach((it,idx)=>{ const d=document.createElement("div"); d.className="ev";
+    d.innerHTML=`<div class="in"><b style="color:var(--azul)">${it.codigo}</b> · ${it.req||"(sin descripción)"}${it.cant?` &nbsp;<span class="mut" style="margin:0">x${it.cant}</span>`:""}<div class="ac"><a class="lnk" onclick="quitarExec(${idx})">quitar</a></div></div>`;
+    c.appendChild(d); });
+  const n=execItems.length; if(n) $("ereqInfo").textContent = n+(n===1?" evidencia en la lista.":" evidencias en la lista.");
+  chequearGen();
+}
+window.quitarExec=(i)=>{ execItems.splice(i,1); renderExecItems(); };
+function itemCant(cod){ const it=itemsCfg().find(i=>i.codigo===cod); return it?(it.cant||""):""; }
 
 let execItems = [];
 async function cargarReq(file){
@@ -211,22 +237,24 @@ async function cargarReq(file){
     const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:""});
     const get=(o,n)=>{ for(const k in o){ if(n.includes(k.trim().toLowerCase())) return String(o[k]).trim(); } return ""; };
-    execItems = rows.map(r=>({ codigo:get(r,["item_codigo","codigo","código","item","ítem","id","cod"]), req:get(r,["requerimiento","descripcion","descripción","detalle","concepto"]) })).filter(x=>x.codigo);
-    const c=rows.map(r=>get(r,["cliente","client"])).find(Boolean), e=rows.map(r=>get(r,["evento","nombre_evento"])).find(Boolean);
+    execItems = rows.map(r=>({ codigo:get(r,["item_codigo","codigo","código","item","ítem","id","cod"]), req:get(r,["requerimiento","descripcion","descripción","detalle","concepto"]), cant:get(r,["cantidad","cant","qty","unidades"]) })).filter(x=>x.codigo);
+    const c=rows.map(r=>get(r,["cliente","client"])).find(Boolean), e=rows.map(r=>get(r,["evento","nombre_evento"])).find(Boolean), ci=rows.map(r=>get(r,["ciudad","municipio"])).find(Boolean);
     if(c && !$("ecliente").value) $("ecliente").value=c;
     if(e && !$("eevento").value) $("eevento").value=e;
-    $("ereqInfo").textContent = execItems.length ? execItems.length+" evidencias cargadas." : "No se encontró la columna de código (item_codigo / codigo / id).";
-    chequearGen();
+    if(ci && !$("eciudad").value) $("eciudad").value=ci;
+    if(!execItems.length) $("ereqInfo").textContent="No se encontró la columna de código (item_codigo / codigo / id).";
+    renderExecItems();
   }catch(err){ $("ereqInfo").textContent="No se pudo leer: "+err.message; }
 }
 function chequearGen(){ $("egen").disabled = !(execItems.length && $("ecliente").value.trim() && $("eevento").value.trim()); }
 function saveConfigDesdeExec(){
-  cfg = { cl:$("ecliente").value.trim(), ev:$("eevento").value.trim(), it:execItems.map(i=>({codigo:i.codigo,req:i.req})), od:(localStorage.getItem("est_onedrive")||"") };
+  cfg = { cl:$("ecliente").value.trim(), ev:$("eevento").value.trim(), fe:$("efecha").value, ci:$("eciudad").value.trim(),
+          it:execItems.map(i=>({codigo:i.codigo,req:i.req,cant:i.cant||""})), od:(localStorage.getItem("est_onedrive")||"") };
   saveJSON("est_config", cfg);
 }
 function generarAcceso(){
   saveConfigDesdeExec();
-  const link = location.origin+location.pathname+"#c="+encodeURIComponent(encCfg(cfg));
+  const link = PROD+"#c="+encodeURIComponent(encCfg(cfg));
   $("acLink").value = link; $("acWrap").classList.remove("hide"); $("acCopy").textContent="Copiar enlace";
   $("acQR").innerHTML="";
   if(window.QRCode){ try{ new QRCode($("acQR"), {text:link, width:220, height:220, colorDark:"#0B4EA2", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.L}); }
@@ -320,8 +348,8 @@ async function empaquetar(enviar){
   enviando=true; $("enviar").disabled=true; $("zip").disabled=true; $("sendInfo").textContent="Preparando…";
   try{
     calcularNombres(); const zip=new JSZip();
-    let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,item,archivo,fecha,hora,lugar,lat,lon\n";
-    listas.forEach(e=>{ zip.file(e.filename,e.blob); csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,e.itemCodigo,e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
+    let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,evento_fecha,evento_ciudad,item,cantidad,archivo,fecha,hora,lugar,lat,lon\n";
+    listas.forEach(e=>{ zip.file(e.filename,e.blob); csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,cfg.fe||"",cfg.ci||"",e.itemCodigo,itemCant(e.itemCodigo),e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
     zip.file("manifiesto.csv",csv);
     const blob=await zip.generateAsync({type:"blob"});
     const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
