@@ -468,15 +468,30 @@ async function empaquetar(enviar){
        Clave para Android: no hay ningún await antes de share() -> el gesto del usuario sigue vivo,
        y las imágenes/videos sí están en la lista blanca del Web Share (el .zip no lo estaba). */
     const textoShare=`Operador ${operador.nombre} (${operador.cedula}) · ${cfg.cl} · ${cfg.ev}`;
+    const od=(localStorage.getItem("est_onedrive")||"").trim();
+    /* ¿El dispositivo puede compartir un .zip? (prueba sincrónica). iOS: sí -> mantenemos la buena
+       práctica de enviar el .zip. Android: no -> compartimos los archivos sueltos. */
+    const zipCompartible = navigator.canShare && navigator.canShare({files:[new File([new Uint8Array([80,75,3,4])],"probe.zip",{type:"application/zip"})]});
+    if(zipCompartible){
+      $("sendInfo").textContent="Preparando ZIP…";
+      const zip=new JSZip(); listas.forEach(e=>zip.file(e.filename,e.blob)); zip.file("manifiesto.csv",csv);
+      const blob=await zip.generateAsync({type:"blob"});   // en iOS el await no rompe el gesto
+      const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
+      try{ await navigator.share({files:[new File([blob],nombre,{type:"application/zip"})], title:"Evidencias", text:textoShare}); $("sendInfo").textContent="Compartido. Elige la app destino (OneDrive, correo, WhatsApp…)."; exito(); }
+      catch(err){ if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; } else { bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); exito(); } }
+      return;
+    }
+    /* Android: el .zip no es compartible. Compartimos los archivos individuales SIN await previo
+       (gesto vivo) y SIN 'text' (con text+files Android suele soltar los archivos y solo comparte el texto). */
     const media=listas.map(e=> new File([e.blob], e.filename, {type: e.tipo==="video" ? ((e.file&&e.file.type)||"video/mp4") : "image/jpeg"}));
     const csvFile=new File([csv],"manifiesto.csv",{type:"text/csv"});
     let toShare=[...media, csvFile];
-    if(!(navigator.canShare && navigator.canShare({files:toShare}))) toShare=media;   // algunos dispositivos no comparten CSV -> solo media
+    if(!(navigator.canShare && navigator.canShare({files:toShare}))) toShare=media;   // si no admite el CSV -> solo media
     if(navigator.canShare && navigator.canShare({files:toShare})){
-      try{ await navigator.share({files:toShare, title:"Evidencias", text:textoShare}); $("sendInfo").textContent="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…)."; exito(); }
+      try{ await navigator.share({files:toShare}); $("sendInfo").textContent="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…)."; exito(); }   // sin title/text -> los archivos SÍ se adjuntan
       catch(err){ if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; } else { await descargarZIP(listas, csv, exito); } }
     } else {
-      await descargarZIP(listas, csv, exito);   // el dispositivo no permite compartir archivos -> ZIP + guía OneDrive
+      await descargarZIP(listas, csv, exito);   // no comparte archivos -> ZIP + guía OneDrive
     }
   } finally { enviando=false; renderLista(); }
 }
