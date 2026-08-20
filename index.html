@@ -136,8 +136,8 @@
       <div class="h" id="ctx"></div>
       <label>Requerimiento para las próximas capturas (opcional)</label>
       <select id="item"></select>
-      <button class="btn" id="btnCap">Capturar (foto o video)</button>
-      <button class="btn sec" id="btnGal" style="margin-top:10px">Galería (fotos o videos)</button>
+      <button class="btn" id="btnCap" style="margin-top:12px">Capturar (foto o video)</button>
+      <button class="btn sec" id="btnGal" style="margin-top:12px">Galería (fotos o videos)</button>
       <input id="capf" type="file" accept="image/*" capture="environment">
       <input id="vidf" type="file" accept="video/*" capture="environment">
       <input id="gal" type="file" accept="image/*,video/*" multiple>
@@ -440,6 +440,19 @@ async function redibujarTodas(){
 
 function csvCell(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 let enviando=false;
+function construirCSV(listas){
+  let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,evento_fecha,evento_ciudad,item,cantidad,tipo,archivo,fecha,hora,lugar,lat,lon\n";
+  listas.forEach(e=>{ csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,cfg.fe||"",cfg.ci||"",e.itemCodigo,itemCant(e.itemCodigo),e.tipo||"foto",e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
+  return csv;
+}
+async function descargarZIP(listas, csv, exito){
+  $("sendInfo").textContent="Generando ZIP…";
+  const zip=new JSZip(); listas.forEach(e=>zip.file(e.filename,e.blob)); zip.file("manifiesto.csv",csv);
+  const blob=await zip.generateAsync({type:"blob"});
+  const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
+  const od=(localStorage.getItem("est_onedrive")||"").trim();
+  bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); exito();
+}
 async function empaquetar(enviar){
   if(enviando) return;
   const listas=batch.filter(e=>e.status==="listo"); if(!listas.length) return;
@@ -448,31 +461,23 @@ async function empaquetar(enviar){
   enviando=true; $("enviar").disabled=true; $("zip").disabled=true; $("sendInfo").textContent="Preparando…";
   const exito=()=>{ const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); renderLista(); };
   try{
-    calcularNombres(); const zip=new JSZip();
-    let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,evento_fecha,evento_ciudad,item,cantidad,tipo,archivo,fecha,hora,lugar,lat,lon\n";
-    listas.forEach(e=>{ zip.file(e.filename,e.blob); csv+=[operador.cedula,operador.nombre,operador.celular,cfg.cl,cfg.ev,cfg.fe||"",cfg.ci||"",e.itemCodigo,itemCant(e.itemCodigo),e.tipo||"foto",e.filename,e.datos.fecha,e.datos.hora,e.datos.lugar,e.datos.lat,e.datos.lon].map(csvCell).join(",")+"\n"; });
-    zip.file("manifiesto.csv",csv);
-    const blob=await zip.generateAsync({type:"blob"});
-    const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
-    const od=(localStorage.getItem("est_onedrive")||"").trim();
+    calcularNombres();
+    const csv=construirCSV(listas);
+    if(!enviar){ await descargarZIP(listas, csv, exito); return; }
+    /* ENVIAR: compartir los ARCHIVOS INDIVIDUALES (fotos/videos + manifiesto) SIN generar ZIP.
+       Clave para Android: no hay ningún await antes de share() -> el gesto del usuario sigue vivo,
+       y las imágenes/videos sí están en la lista blanca del Web Share (el .zip no lo estaba). */
     const textoShare=`Operador ${operador.nombre} (${operador.cedula}) · ${cfg.cl} · ${cfg.ev}`;
-    const file=new File([blob],nombre,{type:"application/zip"});
-    const bajarConGuia=()=>{ bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); exito(); };
-    if(!enviar){ bajarConGuia(); }
-    else if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file],title:"Evidencias",text:textoShare}); $("sendInfo").textContent="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…)."; exito(); }
-      catch(err){
-        if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; }
-        else{
-          // Android: tras generar el ZIP se pierde el gesto y share() falla. Ofrecer un botón que comparte DENTRO de su propio gesto.
-          $("sendInfo").innerHTML='ZIP listo. <button class="btn" id="shareNow" style="margin-top:8px">Compartir por WhatsApp, correo, OneDrive…</button><div class="mut">o <a class="lnk" id="dlNow">descargar el ZIP</a></div>';
-          $("shareNow").addEventListener("click", async()=>{
-            try{ await navigator.share({files:[file],title:"Evidencias",text:textoShare}); $("sendInfo").textContent="Compartido."; exito(); }
-            catch(e2){ if(e2&&e2.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado."; } else { bajarConGuia(); } } });
-          $("dlNow").addEventListener("click", bajarConGuia);
-        }
-      }
-    } else { bajarConGuia(); }
+    const media=listas.map(e=> new File([e.blob], e.filename, {type: e.tipo==="video" ? ((e.file&&e.file.type)||"video/mp4") : "image/jpeg"}));
+    const csvFile=new File([csv],"manifiesto.csv",{type:"text/csv"});
+    let toShare=[...media, csvFile];
+    if(!(navigator.canShare && navigator.canShare({files:toShare}))) toShare=media;   // algunos dispositivos no comparten CSV -> solo media
+    if(navigator.canShare && navigator.canShare({files:toShare})){
+      try{ await navigator.share({files:toShare, title:"Evidencias", text:textoShare}); $("sendInfo").textContent="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…)."; exito(); }
+      catch(err){ if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; } else { await descargarZIP(listas, csv, exito); } }
+    } else {
+      await descargarZIP(listas, csv, exito);   // el dispositivo no permite compartir archivos -> ZIP + guía OneDrive
+    }
   } finally { enviando=false; renderLista(); }
 }
 function bajar(blob,nombre){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nombre; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
