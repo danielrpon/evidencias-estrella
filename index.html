@@ -96,10 +96,8 @@
       <div class="mut" id="ereqInfo">Carga un Excel/CSV o agrega manualmente. Columnas: item_codigo · requerimiento · cantidad</div>
       <div class="h" style="margin-top:14px">Agregar evidencia manualmente</div>
       <div class="fld"><label>Requerimiento</label><input id="mireq" type="text" autocomplete="off" placeholder="Ej.: Sistema de sonido"></div>
-      <div class="row" style="margin-top:8px">
-        <div class="fld"><label>Código</label><input id="micod" type="text" autocomplete="off" placeholder="01"></div>
-        <div class="fld"><label>Cantidad</label><input id="micant" type="number" min="1" placeholder="1"></div>
-      </div>
+      <div class="fld" style="margin-top:8px"><label>Cantidad</label><input id="micant" type="number" min="1" placeholder="1"></div>
+      <div class="mut" id="miCodHint">La app asigna el código automáticamente (siguiente consecutivo).</div>
       <button class="btn sec" id="miadd" style="margin-top:8px">Agregar a la lista</button>
       <div id="execList" class="list" style="margin-top:10px"></div>
       <div style="height:14px"></div>
@@ -136,7 +134,7 @@
   <div id="cap" class="hide">
     <div class="card">
       <div class="h" id="ctx"></div>
-      <label>Ítem a evidenciar</label>
+      <label>Requerimiento para las próximas capturas (opcional)</label>
       <select id="item"></select>
       <button class="btn" id="btnCap">Capturar (foto o video)</button>
       <button class="btn sec" id="btnGal" style="margin-top:10px">Galería (fotos o videos)</button>
@@ -244,9 +242,10 @@ $("acCopy").addEventListener("click", ()=>{ if(navigator.clipboard) navigator.cl
 $("acGo").addEventListener("click", ()=>{ saveConfigDesdeExec(); irALogin(); });
 $("goExec").addEventListener("click", ()=>{ prefillExec(); show("exec"); });
 $("goOper").addEventListener("click", ()=>{ if(cfg) irALogin(); else $("homeHint").textContent="Aún no hay una operación configurada en este dispositivo. Pide el enlace o QR de acceso a tu ejecutivo."; });
-$("miadd").addEventListener("click", ()=>{ const codigo=$("micod").value.trim(), req=$("mireq").value.trim(), cant=$("micant").value.trim();
-  if(!codigo){ alert("Escribe el código del ítem (ej. 01)."); return; }
-  execItems.push({codigo,req,cant}); $("micod").value=""; $("mireq").value=""; $("micant").value=""; renderExecItems(); $("mireq").focus(); });
+function nextCodigo(){ let mx=0; execItems.forEach(it=>{ const n=parseInt(String(it.codigo).replace(/\D/g,""),10); if(!isNaN(n)&&n>mx) mx=n; }); return String(mx+1).padStart(2,"0"); }
+$("miadd").addEventListener("click", ()=>{ const req=$("mireq").value.trim(), cant=$("micant").value.trim();
+  if(!req){ alert("Escribe el requerimiento."); return; }
+  execItems.push({codigo:nextCodigo(),req,cant}); $("mireq").value=""; $("micant").value=""; renderExecItems(); $("mireq").focus(); });
 function prefillExec(){ if(cfg){ $("ecliente").value=cfg.cl||""; $("eevento").value=cfg.ev||""; $("efecha").value=cfg.fe||""; $("eciudad").value=cfg.ci||""; execItems=itemsCfg().map(i=>({codigo:i.codigo,req:i.req,cant:i.cant||""})); renderExecItems(); } }
 function renderExecItems(){
   const c=$("execList"); c.innerHTML="";
@@ -254,6 +253,7 @@ function renderExecItems(){
     d.innerHTML=`<div class="in"><b style="color:var(--azul)">${it.codigo}</b> · ${it.req||"(sin descripción)"}${it.cant?` &nbsp;<span class="mut" style="margin:0">x${it.cant}</span>`:""}<div class="ac"><a class="lnk" onclick="quitarExec(${idx})">quitar</a></div></div>`;
     c.appendChild(d); });
   const n=execItems.length; if(n) $("ereqInfo").textContent = n+(n===1?" evidencia en la lista.":" evidencias en la lista.");
+  if($("miCodHint")) $("miCodHint").textContent = "La app asignará el código "+nextCodigo()+" a la próxima evidencia.";
   chequearGen();
 }
 window.quitarExec=(i)=>{ execItems.splice(i,1); renderExecItems(); };
@@ -270,7 +270,9 @@ async function cargarReq(file){
     const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:""});
     const get=(o,n)=>{ for(const k in o){ if(n.includes(k.trim().toLowerCase())) return String(o[k]).trim(); } return ""; };
-    execItems = rows.map(r=>({ codigo:get(r,["item_codigo","codigo","código","item","ítem","id","cod"]), req:get(r,["requerimiento","descripcion","descripción","detalle","concepto"]), cant:get(r,["cantidad","cant","qty","unidades"]) })).filter(x=>x.codigo);
+    execItems = rows.map(r=>({ codigo:get(r,["item_codigo","codigo","código","item","ítem","id","cod"]), req:get(r,["requerimiento","descripcion","descripción","detalle","concepto"]), cant:get(r,["cantidad","cant","qty","unidades"]) })).filter(x=>x.req||x.codigo);
+    let mx=0; execItems.forEach(it=>{ const n=parseInt(String(it.codigo).replace(/\D/g,""),10); if(!isNaN(n)&&n>mx)mx=n; });
+    execItems.forEach(it=>{ if(!String(it.codigo).trim()){ mx++; it.codigo=String(mx).padStart(2,"0"); } });   // la app asigna código a los ítems sin código
     const c=rows.map(r=>get(r,["cliente","client"])).find(Boolean), e=rows.map(r=>get(r,["evento","nombre_evento"])).find(Boolean), ci=rows.map(r=>get(r,["ciudad","municipio"])).find(Boolean);
     if(c && !$("ecliente").value) $("ecliente").value=c;
     if(e && !$("eevento").value) $("eevento").value=e;
@@ -326,8 +328,9 @@ $("salir").addEventListener("click", ()=>{ if(operador){ $("lnom").value=operado
 
 /* ---- OPERADOR: captura ---- */
 function irACaptura(){
-  const s=$("item"); s.innerHTML="";
+  const s=$("item"); s.innerHTML="<option value=''>— Sin asignar —</option>";
   itemsCfg().forEach(it=>{ const o=document.createElement("option"); o.value=it.codigo; o.textContent=it.req?`${it.codigo} · ${it.req}`:it.codigo; s.appendChild(o); });
+  s.value="";
   $("ctx").textContent = (cfg.cl||"—")+" · "+(cfg.ev||"—");
   batch=[]; renderLista(); show("cap"); window.scrollTo(0,0); pedirUbicacion();
 }
@@ -394,21 +397,24 @@ async function procesar(entry){
   renderLista();
 }
 function claveDe(cod){ return `${slug(cfg.cl)}|${slug(cfg.ev)}|${cod}`; }
-function calcularNombres(){ const u={}; batch.forEach(e=>{ const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag(); e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}_${String(e.consec).padStart(3,"0")}.${e.ext||"jpg"}`; }); }
+function calcularNombres(){ const u={}; batch.forEach(e=>{ if(!e.itemCodigo){ e.filename=""; return; } const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag(); e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}_${String(e.consec).padStart(3,"0")}.${e.ext||"jpg"}`; }); }
 function renderLista(){
   calcularNombres(); const c=$("list"); c.innerHTML="";
   const listas=batch.filter(e=>e.status==="listo").length;
-  $("cnt").textContent = batch.length ? `${listas}/${batch.length} listas` : "Aún no agregas evidencias.";
+  const sinReq=batch.filter(e=>e.status==="listo"&&!e.itemCodigo).length;
+  $("cnt").innerHTML = batch.length ? (`${listas}/${batch.length} listas`+(sinReq?` · <span style="color:#b3261e">${sinReq} sin requerimiento</span>`:"")) : "Aún no agregas evidencias.";
   $("zip").disabled=listas===0; $("enviar").disabled=listas===0;
   batch.forEach(e=>{
-    const opts=itemsCfg().map(it=>`<option value="${it.codigo}" ${it.codigo===e.itemCodigo?"selected":""}>${it.codigo}${it.req?" · "+it.req.slice(0,26):""}</option>`).join("");
+    const opts=`<option value="" ${!e.itemCodigo?"selected":""}>— Selecciona requerimiento —</option>`+itemsCfg().map(it=>`<option value="${it.codigo}" ${it.codigo===e.itemCodigo?"selected":""}>${it.codigo}${it.req?" · "+it.req.slice(0,26):""}</option>`).join("");
     const d=document.createElement("div"); d.className="ev";
     const badge=e.tipo==="video"?`<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:22px;text-shadow:0 1px 4px #000">▶</span>`:"";
     const thumbHtml=e.thumb?`<div style="position:relative;flex:none;width:66px;height:66px"><img src="${e.thumb}" style="width:66px;height:66px;object-fit:cover;border-radius:7px;background:#000">${badge}</div>`
       :`<div style="width:66px;height:66px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;background:#f0f0f0;border-radius:7px">${e.tipo==="video"?"▶":"…"}</div>`;
+    const fnHtml = e.status!=="listo" ? '<span style="color:var(--muted)">'+e.status+'</span>'
+      : (!e.itemCodigo ? '<span style="color:#b3261e">Asigna un requerimiento ↑</span>' : e.filename);
     d.innerHTML=thumbHtml+
-      `<div class="in"><select onchange="cambiarItem(${e.id},this.value)">${opts}</select><div class="fn">${e.status==="listo"?e.filename:'<span style="color:var(--muted)">'+e.status+'</span>'}</div>
-       <div class="ac">${e.status==="listo"?`<a class="lnk" onclick="descargarUno(${e.id})">descargar</a>`:""}<a class="lnk" onclick="quitar(${e.id})">quitar</a></div></div>`;
+      `<div class="in"><select onchange="cambiarItem(${e.id},this.value)">${opts}</select><div class="fn">${fnHtml}</div>
+       <div class="ac">${e.status==="listo"&&e.itemCodigo?`<a class="lnk" onclick="descargarUno(${e.id})">descargar</a>`:""}<a class="lnk" onclick="quitar(${e.id})">quitar</a></div></div>`;
     c.appendChild(d);
   });
 }
@@ -432,8 +438,12 @@ async function redibujarTodas(){
 function csvCell(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 let enviando=false;
 async function empaquetar(enviar){
-  if(enviando) return; const listas=batch.filter(e=>e.status==="listo"); if(!listas.length) return;
+  if(enviando) return;
+  const listas=batch.filter(e=>e.status==="listo"); if(!listas.length) return;
+  const sinReq=listas.filter(e=>!e.itemCodigo);
+  if(sinReq.length){ alert(`No puedes ${enviar?"enviar":"descargar"}: hay ${sinReq.length} evidencia(s) sin requerimiento asignado. Selecciona un requerimiento de la lista en cada evidencia (menú ↑) antes de continuar.`); renderLista(); return; }
   enviando=true; $("enviar").disabled=true; $("zip").disabled=true; $("sendInfo").textContent="Preparando…";
+  const exito=()=>{ const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); renderLista(); };
   try{
     calcularNombres(); const zip=new JSZip();
     let csv="operador_cedula,operador_nombre,operador_celular,cliente,evento,evento_fecha,evento_ciudad,item,cantidad,tipo,archivo,fecha,hora,lugar,lat,lon\n";
@@ -441,20 +451,25 @@ async function empaquetar(enviar){
     zip.file("manifiesto.csv",csv);
     const blob=await zip.generateAsync({type:"blob"});
     const nombre=`Evidencias_${slug(cfg.cl)}_${slug(cfg.ev)}_${slug(operador.cedula)}.zip`;
-    const od=(localStorage.getItem("est_onedrive")||"").trim(); let ok=true;
-    if(!enviar){ bajar(blob,nombre); $("sendInfo").textContent="ZIP descargado."; }
-    else{
-      const file=new File([blob],nombre,{type:"application/zip"});
-      const bajarConGuia=()=>{ bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); };
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        try{ await navigator.share({files:[file],title:"Evidencias",text:`Operador ${operador.nombre} (${operador.cedula}) · ${cfg.cl} · ${cfg.ev}`}); $("sendInfo").textContent="Compartido. Elige OneDrive y la carpeta destino."; }
-        catch(err){
-          if(err&&err.name==="AbortError"){ ok=false; $("sendInfo").textContent="Envío cancelado. Puedes reintentar o usar «Descargar ZIP»."; }
-          else{ bajarConGuia(); }   // Android suele fallar el share tras el await (gesto expirado) -> respaldo: descargar
+    const od=(localStorage.getItem("est_onedrive")||"").trim();
+    const textoShare=`Operador ${operador.nombre} (${operador.cedula}) · ${cfg.cl} · ${cfg.ev}`;
+    const file=new File([blob],nombre,{type:"application/zip"});
+    const bajarConGuia=()=>{ bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); exito(); };
+    if(!enviar){ bajarConGuia(); }
+    else if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file],title:"Evidencias",text:textoShare}); $("sendInfo").textContent="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…)."; exito(); }
+      catch(err){
+        if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; }
+        else{
+          // Android: tras generar el ZIP se pierde el gesto y share() falla. Ofrecer un botón que comparte DENTRO de su propio gesto.
+          $("sendInfo").innerHTML='ZIP listo. <button class="btn" id="shareNow" style="margin-top:8px">Compartir por WhatsApp, correo, OneDrive…</button><div class="mut">o <a class="lnk" id="dlNow">descargar el ZIP</a></div>';
+          $("shareNow").addEventListener("click", async()=>{
+            try{ await navigator.share({files:[file],title:"Evidencias",text:textoShare}); $("sendInfo").textContent="Compartido."; exito(); }
+            catch(e2){ if(e2&&e2.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado."; } else { bajarConGuia(); } } });
+          $("dlNow").addEventListener("click", bajarConGuia);
         }
-      } else { bajarConGuia(); }
-    }
-    if(ok){ const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); }
+      }
+    } else { bajarConGuia(); }
   } finally { enviando=false; renderLista(); }
 }
 function bajar(blob,nombre){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nombre; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
