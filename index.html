@@ -357,10 +357,11 @@ $("cfgSave").addEventListener("click", ()=>{ localStorage.setItem("est_onedrive"
 /* ---- lote ---- */
 function agregar(fileList, meta){
   const cod=$("item").value;
+  const now=new Date(); const cargada={fecha:`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`, hora:`${z(now.getHours())}:${z(now.getMinutes())}`};
   [...fileList].forEach(file=>{
     const video=/^video\//.test(file.type)||/\.(mp4|mov|m4v|3gp|webm|avi|mkv)$/i.test(file.name);
     const ext=video?((file.name.split(".").pop()||"mp4").toLowerCase()):"jpg";
-    const e={id:++seq,file,itemCodigo:cod,tipo:video?"video":"foto",ext,status:"procesando",blob:null,thumb:"",datos:{},filename:"",meta:meta||null};
+    const e={id:++seq,file,itemCodigo:cod,tipo:video?"video":"foto",ext,status:"procesando",blob:null,thumb:"",datos:{},filename:"",meta:meta||null,cargada};
     batch.push(e); procesar(e); });
   renderLista();
 }
@@ -397,7 +398,9 @@ async function procesar(entry){
   renderLista();
 }
 function claveDe(cod){ return `${slug(cfg.cl)}|${slug(cfg.ev)}|${cod}`; }
-function calcularNombres(){ const u={}; batch.forEach(e=>{ if(!e.itemCodigo){ e.filename=""; return; } const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag(); e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}_${String(e.consec).padStart(3,"0")}.${e.ext||"jpg"}`; }); }
+function calcularNombres(){ const u={}; batch.forEach(e=>{ if(!e.itemCodigo){ e.filename=""; return; } const base=counters[claveDe(e.itemCodigo)]||0; u[e.itemCodigo]=(u[e.itemCodigo]||0)+1; e.consec=base+u[e.itemCodigo]; const desc=slug(itemReq(e.itemCodigo)); const ot=opTag();
+  const fch=e.datos.fecha||(e.cargada?e.cargada.fecha:""); const hr=(e.datos.hora||(e.cargada?e.cargada.hora:"")).replace(/:/g,""); const fh=fch?("_"+fch+(hr?"_"+hr:"")):"";   // fecha/hora de captura (EXIF/dispositivo) o, si no hay, de carga
+  e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}${fh}_${String(e.consec).padStart(3,"0")}.${e.ext||"jpg"}`; }); }
 function renderLista(){
   calcularNombres(); const c=$("list"); c.innerHTML="";
   const listas=batch.filter(e=>e.status==="listo").length;
