@@ -481,14 +481,12 @@ async function empaquetar(enviar){
       catch(err){ if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; } else { bajar(blob,nombre); $("sendInfo").innerHTML='ZIP «'+nombre+'» descargado.'+(od?' <a class="lnk" href="'+od+'" target="_blank" rel="noopener">Abrir carpeta OneDrive</a> y súbelo.':' Súbelo a tu carpeta OneDrive.'); exito(); } }
       return;
     }
-    /* Android: el .zip no es compartible. Compartimos los archivos individuales SIN await previo
-       (gesto vivo) y SIN 'text' (con text+files Android suele soltar los archivos y solo comparte el texto). */
+    /* Android: el .zip no es compartible. Compartimos SOLO fotos/videos (media pura), SIN await previo
+       (gesto vivo), SIN 'text' y SIN el .csv: mezclar el manifiesto .csv con las fotos hace que el intent
+       quede de tipo mixto y WhatsApp/WhatsApp Business no adjunte (el correo sí). El manifiesto queda en «Descargar ZIP». */
     const media=listas.map(e=> new File([e.blob], e.filename, {type: e.tipo==="video" ? ((e.file&&e.file.type)||"video/mp4") : "image/jpeg"}));
-    const csvFile=new File([csv],"manifiesto.csv",{type:"text/csv"});
-    let toShare=[...media, csvFile];
-    if(!(navigator.canShare && navigator.canShare({files:toShare}))) toShare=media;   // si no admite el CSV -> solo media
-    if(navigator.canShare && navigator.canShare({files:toShare})){
-      try{ await navigator.share({files:toShare}); $("sendInfo").textContent="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…)."; exito(); }   // sin title/text -> los archivos SÍ se adjuntan
+    if(navigator.canShare && navigator.canShare({files:media})){
+      try{ await navigator.share({files:media}); $("sendInfo").innerHTML="Compartido. Elige la app destino (WhatsApp, correo, OneDrive…). <span class=\"mut\">El manifiesto va en «Descargar ZIP» si lo necesitas para el registro.</span>"; exito(); }   // sin title/text/csv -> WhatsApp SÍ adjunta
       catch(err){ if(err&&err.name==="AbortError"){ $("sendInfo").textContent="Envío cancelado. Puedes reintentar."; } else { await descargarZIP(listas, csv, exito); } }
     } else {
       await descargarZIP(listas, csv, exito);   // no comparte archivos -> ZIP + guía OneDrive
