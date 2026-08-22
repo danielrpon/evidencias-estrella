@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Evidencias · Estrella</title>
 <style>
-  :root{ --azul:#0B4EA2; --azul-d:#083b7d; --oro:#F2B21A; --oro-d:#cf9a09;
+  :root{ --azul:#0B4EA2; --azul-d:#083b7d; --oro:#F2B21A; --oro-d:#cf9a09; --btn-ink:#10233f;
     --bg:#eef2f7; --panel:#ffffff; --line:#d9e1ec; --field:#ffffff; --txt:#16274a; --muted:#6b7789;
     --font:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
   *{box-sizing:border-box} html,body{margin:0}
@@ -26,7 +26,7 @@
   input,select{width:100%;min-width:0;background:var(--field);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:11px;font-size:15px;font-family:var(--font)}
   input:focus,select:focus{outline:none;border-color:var(--azul)}
   .fld+.fld{margin-top:10px} .row{display:flex;gap:10px} .row>*{flex:1;min-width:0} .row .fld+.fld{margin-top:0}
-  .btn{width:100%;max-width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font);background:var(--oro);color:#10233f;white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+  .btn{width:100%;max-width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font);background:var(--oro);color:var(--btn-ink);white-space:normal;overflow-wrap:anywhere;line-height:1.25}
   .btn:disabled{opacity:.45;cursor:not-allowed}
   .btn.sec{background:#fff;color:var(--azul);border:1px solid var(--azul);font-weight:700}
   .btn2{display:flex;gap:10px;margin-top:10px} .btn2 .btn{margin:0}
@@ -62,7 +62,7 @@
   .cam .bar .btn.sec{background:transparent;color:#fff;border-color:#4a5a72}
   .cam .cammode{display:flex;gap:8px;justify-content:center;padding:8px 8px 0}
   .cam .cammode button{background:rgba(255,255,255,.12);color:#fff;border:1px solid #4a5a72;border-radius:20px;padding:6px 20px;font-family:var(--font);font-weight:700;font-size:13px;cursor:pointer}
-  .cam .cammode button.on{background:var(--oro);color:#10233f;border-color:var(--oro)}
+  .cam .cammode button.on{background:var(--oro);color:var(--btn-ink);border-color:var(--oro)}
   .modal{position:fixed;inset:0;background:rgba(8,20,40,.55);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
   .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;width:100%;max-width:520px}
 </style>
@@ -70,7 +70,7 @@
 <body>
 <div class="hd">
   <div class="hdin">
-    <img class="logo" src="logo_white.png" alt="Estrella">
+    <img class="logo" id="brandLogo" src="logo_white.png" alt=""><span class="logo" id="brandWord" style="display:none;color:#fff;font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:.02em;align-self:center"></span>
     <div class="r"><span id="who"></span> <a id="btnCfg">Ajustes</a></div>
   </div>
 </div>
@@ -209,7 +209,27 @@
 <script src="qrcode.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const VERDE = "#F2B21A";   // acento dorado Estrella en la marca de agua
+/* ===== Marca conmutable (white-label) — Freaknerd como producto, skin por cliente ===== */
+const BRANDS = {
+  estrella:  { title:"Evidencias · Estrella",  azul:"#0B4EA2", azulD:"#083b7d", oro:"#F2B21A", oroD:"#cf9a09", btnInk:"#10233f", stamp:"#F2B21A", qr:"#0B4EA2", logoImg:"logo_white.png", word:null },
+  freaknerd: { title:"Evidencias · Freaknerd", azul:"#0A0B0D", azulD:"#000000", oro:"#26E57C", oroD:"#0F9E56", btnInk:"#0A0B0D", stamp:"#26E57C", qr:"#0A0B0D", logoImg:null, word:'freaknerd<i style="color:var(--oro);font-style:normal">_</i>' }
+};
+// Este repo (el que usa Estrella) queda con su piel. Para ver/servir el skin de producto: ?brand=freaknerd
+const BRAND_DEFAULT = "estrella";
+function brandActivo(){ try{ const q=new URLSearchParams(location.search).get("brand"); if(q && BRANDS[q]) return q; }catch(_){} return BRAND_DEFAULT; }
+let MARCA = BRANDS[brandActivo()];
+let VERDE = MARCA.stamp;   // acento de la marca de agua según el skin activo
+function aplicarMarca(){
+  MARCA = BRANDS[brandActivo()]; VERDE = MARCA.stamp;
+  const r = document.documentElement.style;
+  r.setProperty("--azul",MARCA.azul); r.setProperty("--azul-d",MARCA.azulD);
+  r.setProperty("--oro",MARCA.oro);   r.setProperty("--oro-d",MARCA.oroD);
+  r.setProperty("--btn-ink",MARCA.btnInk);
+  document.title = MARCA.title;
+  const img=document.getElementById("brandLogo"), word=document.getElementById("brandWord");
+  if(MARCA.logoImg){ if(img){ img.src=MARCA.logoImg; img.style.display=""; } if(word) word.style.display="none"; }
+  else { if(img) img.style.display="none"; if(word){ word.innerHTML=MARCA.word; word.style.display=""; } }
+}
 const PROD = "https://danielrpon.github.io/evidencias-estrella/";  // el QR/enlace SIEMPRE apunta a la app publicada (no a file://)
 let cfg = null;              // {cl, ev, it:[{codigo,req}], od}
 let operador = loadJSON("est_operador", null);
@@ -231,6 +251,7 @@ function decCfg(s){ try{ return JSON.parse(decodeURIComponent(escape(atob(s))));
 
 /* ---- arranque: decide rol ---- */
 window.addEventListener("DOMContentLoaded", () => {
+  aplicarMarca();
   $("odlink").value = localStorage.getItem("est_onedrive")||"";
   const m = location.hash.match(/[#&]c=([^&]+)/);
   const fromLink = m ? decCfg(decodeURIComponent(m[1])) : null;
@@ -315,7 +336,7 @@ function generarAcceso(){
   $("acLink").textContent = "Generando enlace…";
   $("acWrap").classList.remove("hide"); $("acCopy").textContent="Copiar invitación";
   $("acQR").innerHTML="";
-  if(window.QRCode){ try{ new QRCode($("acQR"), {text:accesoLink, width:220, height:220, colorDark:"#0B4EA2", colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.L}); }
+  if(window.QRCode){ try{ new QRCode($("acQR"), {text:accesoLink, width:220, height:220, colorDark:MARCA.qr, colorLight:"#ffffff", correctLevel:QRCode.CorrectLevel.L}); }
     catch(e){ $("acQR").innerHTML='<div class="mut">Lista muy larga para el QR; comparte el enlace.</div>'; } }
   acortar(accesoLink);
 }
