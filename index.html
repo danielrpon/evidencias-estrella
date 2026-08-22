@@ -142,14 +142,14 @@
   <div id="cap" class="hide">
     <div class="card">
       <div class="h" id="ctx"></div>
-      <label>Requerimiento para las próximas capturas (opcional)</label>
+      <label>1) Elige QUÉ vas a fotografiar (una foto = un ítem)</label>
       <select id="item"></select>
-      <div id="guiaItem" class="guia neutro"></div>
-      <button class="btn" id="btnCap" style="margin-top:12px">Capturar (foto o video)</button>
-      <button class="btn sec" id="btnGal" style="margin-top:12px">Galería (fotos o videos)</button>
+      <div id="guiaItem" class="guia neutro" role="status" aria-live="polite"></div>
+      <button class="btn" id="btnCap" style="margin-top:12px">Capturar foto</button>
+      <button class="btn sec" id="btnGal" style="margin-top:12px">Galería (fotos)</button>
       <input id="capf" type="file" accept="image/*" capture="environment">
       <input id="vidf" type="file" accept="video/*" capture="environment">
-      <input id="gal" type="file" accept="image/*,video/*" multiple>
+      <input id="gal" type="file" accept="image/*" multiple>
       <div class="mut" id="gpsEstado" style="margin-top:6px;cursor:pointer"><b>Toca aquí para activar la ubicación.</b></div>
       <div class="opts">
         <div class="row">
@@ -161,6 +161,7 @@
     </div>
     <div class="card">
       <div class="h">Evidencias del lote</div>
+      <div id="progItems" class="mut"></div>
       <div class="cnt" id="cnt">Aún no agregas fotos.</div>
       <div class="list" id="list"></div>
       <div style="height:12px"></div>
@@ -196,16 +197,16 @@
 <!-- CÁMARA -->
 <div id="camm" class="cam hide">
   <video id="video" autoplay playsinline muted></video>
-  <div class="cammode"><button id="modoFoto" class="on">Foto</button><button id="modoVideo">Video</button></div>
+  <div class="cammode" style="display:none"><button id="modoFoto" class="on">Foto</button><button id="modoVideo">Video</button></div>
   <div class="hint" id="camhint">Encuadra la evidencia y captura.</div>
   <div class="bar"><button class="btn sec" id="camClose">Cerrar</button><button class="btn" id="camShot">Capturar</button><button class="btn sec" id="camFlip">Girar</button></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="exifr.full.umd.js"></script>
+<script src="heic2any.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="jszip.min.js"></script>
+<script src="qrcode.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const VERDE = "#F2B21A";   // acento dorado Estrella en la marca de agua
@@ -408,7 +409,7 @@ function actualizarGuia(){
   const n=fotosDeItem(cod), meta=3, ok=n>=meta;
   const it=itemsDelOperador().find(x=>x.codigo===cod); const nombre=(it&&it.req)?it.req:cod;
   g.className="guia "+(ok?"ok":"falta");
-  g.innerHTML=`<div class="gcount">${ok?"✅":"📸"} ${nombre.slice(0,44)} — ${n}/${meta} fotos ${ok?"· meta cumplida":"· faltan "+(meta-n)}</div>`
+  g.innerHTML=`<div class="gcount">${ok?"✅":"📸"} ${nombre.slice(0,44)} — ${n}/${meta} fotos ${ok?"· meta cumplida":"· faltan "+(meta-n)+(meta-n===1?" foto":" fotos")}</div>`
     +`<div class="gtips"><b>Enfoca:</b> ${tipDeItem(nombre)}.<br>Que ocupe <b>≥60%</b> del encuadre · <b>no rotes</b> el teléfono · el plano abierto solo como contexto.</div>`;
 }
 $("item").addEventListener("change", actualizarGuia);
@@ -502,6 +503,12 @@ function renderLista(){
        <div class="ac">${e.status==="listo"&&e.itemCodigo?`<a class="lnk" onclick="descargarUno(${e.id})">descargar</a>`:""}<a class="lnk" onclick="quitar(${e.id})">quitar</a></div></div>`;
     c.appendChild(d);
   });
+  const pi=$("progItems");
+  if(pi){ const items=itemsDelOperador(); const total=items.length;
+    const faltan=items.filter(it=>fotosDeItem(it.codigo)<3);
+    const compl=total-faltan.length;
+    pi.textContent = total ? ("Ítems completos: "+compl+"/"+total+(faltan.length?(". Faltan: "+faltan.map(it=>it.codigo).join(", ")):". Todos con 3+ fotos.")) : "";
+  }
 }
 window.cambiarItem=(id,v)=>{ const e=batch.find(x=>x.id===id); if(e){ e.itemCodigo=v; renderLista(); } };
 window.quitar=(id)=>{ batch=batch.filter(x=>x.id!==id); renderLista(); };
@@ -541,7 +548,7 @@ async function empaquetar(enviar){
   const sinReq=listas.filter(e=>!e.itemCodigo);
   if(sinReq.length){ alert(`No puedes ${enviar?"enviar":"descargar"}: hay ${sinReq.length} evidencia(s) sin requerimiento asignado. Selecciona un requerimiento de la lista en cada evidencia (menú ↑) antes de continuar.`); renderLista(); return; }
   enviando=true; $("enviar").disabled=true; $("zip").disabled=true; $("sendInfo").textContent="Preparando…";
-  const exito=()=>{ const cta={}; listas.forEach(e=>{ const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); renderLista(); };
+  const exito=()=>{ const cta={}; listas.forEach(e=>{ if(e.tipo!=="foto") return; const k=claveDe(e.itemCodigo); cta[k]=(cta[k]||0)+1; }); for(const k in cta) counters[k]=(counters[k]||0)+cta[k]; saveJSON("est_counters",counters); batch=batch.filter(e=>e.status!=="listo"); renderLista(); };
   try{
     calcularNombres();
     const csv=construirCSV(listas);
@@ -615,7 +622,7 @@ $("modoVideo").addEventListener("click", ()=>{ if(grabando||modo==="video") retu
 function setModoUI(){ $("modoFoto").classList.toggle("on",modo==="foto"); $("modoVideo").classList.toggle("on",modo==="video");
   const b=$("camShot"); if(modo==="foto"){ b.textContent="Capturar"; b.style.background=""; b.style.color=""; $("camhint").textContent="Encuadra la evidencia y captura."; }
   else{ b.textContent=grabando?"Detener":"Grabar"; b.style.background=grabando?"#d33":""; b.style.color=grabando?"#fff":""; $("camhint").textContent=grabando?"Grabando… toca Detener":"Toca Grabar para iniciar el video"; } }
-async function abrirCamara(){ pedirUbicacion(); modo="foto"; setModoUI(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream(false)){ $("camm").classList.add("hide"); $("capf").click(); } }
+async function abrirCamara(){ pedirUbicacion(); modo="foto"; setModoUI(); if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("capf").click(); return; } $("camm").classList.remove("hide"); if(!await abrirStream(false)){ $("camm").classList.add("hide"); $("sendInfo").textContent="Cámara de la app bloqueada; se abrirá la cámara del teléfono. Para usar la guía, permite la cámara en Ajustes del navegador."; $("capf").click(); } }
 async function abrirStream(conAudio){ try{ if(stream)stream.getTracks().forEach(t=>t.stop()); stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:!!conAudio}); $("video").srcObject=stream; return true; }
   catch(_){ if(conAudio){ try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false}); $("video").srcObject=stream; return true; }catch(__){} } return false; } }
 function iniciarGrabacion(){
