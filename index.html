@@ -230,7 +230,7 @@ function aplicarMarca(){
   if(MARCA.logoImg){ if(img){ img.src=MARCA.logoImg; img.style.display=""; } if(word) word.style.display="none"; }
   else { if(img) img.style.display="none"; if(word){ word.innerHTML=MARCA.word; word.style.display=""; } }
 }
-const PROD = "https://danielrpon.github.io/evidencias-estrella/";  // el QR/enlace SIEMPRE apunta a la app publicada (no a file://)
+const PROD = "https://danielrpon.github.io/gestor-de-ejecucion/";  // el QR/enlace SIEMPRE apunta a la app publicada (no a file://)
 let cfg = null;              // {cl, ev, it:[{codigo,req}], od}
 let operador = loadJSON("est_operador", null);
 let counters = loadJSON("est_counters", {});
