@@ -31,6 +31,12 @@
   .btn.sec{background:#fff;color:var(--azul);border:1px solid var(--azul);font-weight:700}
   .btn2{display:flex;gap:10px;margin-top:10px} .btn2 .btn{margin:0}
   .mut{font-size:12px;color:var(--muted);margin-top:8px} .lnk{color:var(--azul);cursor:pointer;text-decoration:underline;font-size:12px}
+  .guia{margin-top:8px;border-radius:9px;padding:9px 11px;font-size:12.5px;line-height:1.4;border:1px solid var(--line)}
+  .guia.neutro{background:#f4f6fa;color:var(--muted)}
+  .guia.falta{background:#fff4e5;border-color:#f0b26b;color:#7a4a12}
+  .guia.ok{background:#e9f7ee;border-color:#7fca97;color:#155f2e}
+  .guia .gcount{font-weight:700;font-size:13.5px} .guia .gtips{margin-top:5px;font-size:11.5px;opacity:.92}
+  .guia .gtips b{font-weight:700}
   input[type=file]{display:none}
   .tgl{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--txt);cursor:pointer} .tgl input{width:18px;height:18px;accent-color:var(--azul);flex:none}
   .opts{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px} .opts .row{flex:1 1 100%}
@@ -138,6 +144,7 @@
       <div class="h" id="ctx"></div>
       <label>Requerimiento para las próximas capturas (opcional)</label>
       <select id="item"></select>
+      <div id="guiaItem" class="guia neutro"></div>
       <button class="btn" id="btnCap" style="margin-top:12px">Capturar (foto o video)</button>
       <button class="btn sec" id="btnGal" style="margin-top:12px">Galería (fotos o videos)</button>
       <input id="capf" type="file" accept="image/*" capture="environment">
@@ -349,8 +356,62 @@ function poblarItemTop(){
 function irACaptura(){
   poblarItemTop();
   $("ctx").textContent = (cfg.cl||"—")+" · "+(cfg.ev||"—")+((operador&&operador.prov)?("  ·  "+operador.prov):"");
-  batch=[]; renderLista(); show("cap"); window.scrollTo(0,0); pedirUbicacion();
+  batch=[]; renderLista(); show("cap"); window.scrollTo(0,0); pedirUbicacion(); actualizarGuia();
 }
+/* ---- Captura guiada por ítem (mínimo 3 fotos enfocadas) ---- */
+function fotosDeItem(cod){
+  if(!cod) return 0;
+  let n=batch.filter(e=>e.itemCodigo===cod && e.tipo==="foto").length;
+  try{ n += (counters[claveDe(cod)]||0); }catch(_){}
+  return n;
+}
+/* diccionario de rasgos distintivos por palabra clave (se busca en la descripción del ítem) */
+var TIPS=[
+  [["pasamanos"],"el riel montado en el BORDE de la tarima (no las vallas del piso)"],
+  [["tarima","escenario","escaleras","podium","estoperol"],"el piso/deck negro con faldón y las escaleras de acceso"],
+  [["techo","lona","montaje nocturno de techo"],"el techo de lona y la estructura, desde abajo se ve la cercha"],
+  [["generador","planta","kva","insonorizado"],"el generador: el motor, el tanque y la cabina (no solo el tablero)"],
+  [["acometida","extension","cable","tablero"],"el tablero de distribución y los cables gruesos conectados"],
+  [["pitch","pantalla","led","panel sellado"],"la pantalla LED encendida, de frente"],
+  [["sonido","parlante","line array","p.a"],"los parlantes / line-array y la consola de audio"],
+  [["radio","microfono","micrófono","splitter","prensa"],"el equipo (radios, micrófonos o el splitter) de cerca"],
+  [["carpa","camerino","stand","gazebo","toldo"],"la carpa completa: techo, estructura y cerramientos"],
+  [["mesa"],"la mesa: superficie y patas, vacía"],
+  [["silla","taburete","banco"],"las sillas apiladas o en fila, de cerca"],
+  [["bandera","banderin","banderín","cenefa"],"la bandera tricolor (amarillo-azul-rojo) en primer plano"],
+  [["floral","follaje","muro verde","arreglo","decoracion","decoración"],"el arreglo/follaje verde de cerca"],
+  [["valla"],"las vallas metálicas en fila, de cerca"],
+  [["rampa"],"la superficie de aluminio de la rampa con la cinta amarillo-negra"],
+  [["baño","bano","portatil vip","porta"],"la cabina de baño portátil, con la puerta cerrada"],
+  [["ambulancia","paramed"],"el vehículo con el texto AMBULANCIA / la cruz visibles"],
+  [["transporte","van","bus","buseta","vehiculo"],"el vehículo completo (van o bus)"],
+  [["refrigerio","alimentacion","alimentación","comida","almuerzo"],"abre una caja/bolsa y muestra el CONTENIDO (los paquetes), no el empaque sellado"],
+  [["botella","agua","hidratante"],"los packs de botellas de agua, de cerca"],
+  [["nevera","cooler","hielo"],"la nevera/cooler con el hielo y el producto adentro"],
+  [["caneca","basura","aseo","limpieza","residuo"],"la caneca / bolsas de basura o el kit de aseo"],
+  [["atril"],"el atril / podio de frente"],
+  [["papayera"],"la banda con los instrumentos de viento"],
+  [["centro de mesa","centros de mesa"],"el centro de mesa: las flores con la botella"],
+  [["fonda"],"la barra/fonda de venta completa"],
+  [["manilla","pulsera","vinilo","cinta","adhesiv"],"el material de cerca (rollos, manillas, vinilo)"],
+  [["personal","logistic","logístic","coordinador","staff"],"a la persona/equipo con la camiseta de la marca visible"],
+];
+function tipDeItem(req){
+  const t=(req||"").toLowerCase();
+  for(const [kws,hint] of TIPS){ if(kws.some(k=>t.indexOf(k)>=0)) return hint; }
+  return "el elemento contratado, que ocupe la mayor parte de la foto";
+}
+function actualizarGuia(){
+  const g=$("guiaItem"); if(!g) return;
+  const cod=$("item").value;
+  if(!cod){ g.className="guia neutro"; g.innerHTML="Elige un requerimiento arriba para ver la guía y el contador de fotos."; return; }
+  const n=fotosDeItem(cod), meta=3, ok=n>=meta;
+  const it=itemsDelOperador().find(x=>x.codigo===cod); const nombre=(it&&it.req)?it.req:cod;
+  g.className="guia "+(ok?"ok":"falta");
+  g.innerHTML=`<div class="gcount">${ok?"✅":"📸"} ${nombre.slice(0,44)} — ${n}/${meta} fotos ${ok?"· meta cumplida":"· faltan "+(meta-n)}</div>`
+    +`<div class="gtips"><b>Enfoca:</b> ${tipDeItem(nombre)}.<br>Que ocupe <b>≥60%</b> del encuadre · <b>no rotes</b> el teléfono · el plano abierto solo como contexto.</div>`;
+}
+$("item").addEventListener("change", actualizarGuia);
 $("gpsEstado").addEventListener("click", pedirUbicacion);
 $("btnCap").addEventListener("click", abrirCamara);
 $("btnGal").addEventListener("click", ()=>$("gal").click());
@@ -423,7 +484,7 @@ function calcularNombres(){ const u={}; batch.forEach(e=>{ if(!e.itemCodigo){ e.
   const fch=e.datos.fecha||(e.cargada?e.cargada.fecha:""); const hr=(e.datos.hora||(e.cargada?e.cargada.hora:"")).replace(/:/g,""); const fh=fch?("_"+fch+(hr?"_"+hr:"")):"";   // fecha/hora de captura (EXIF/dispositivo) o, si no hay, de carga
   e.filename=`${slug(cfg.cl)}_${slug(cfg.ev)}_${e.itemCodigo}${desc&&desc!=="NA"?"_"+desc:""}${ot?"_"+ot:""}${fh}_${String(e.consec).padStart(3,"0")}.${e.ext||"jpg"}`; }); }
 function renderLista(){
-  calcularNombres(); const c=$("list"); c.innerHTML="";
+  calcularNombres(); if(typeof actualizarGuia==="function") actualizarGuia(); const c=$("list"); c.innerHTML="";
   const listas=batch.filter(e=>e.status==="listo").length;
   const sinReq=batch.filter(e=>e.status==="listo"&&!e.itemCodigo).length;
   $("cnt").innerHTML = batch.length ? (`${listas}/${batch.length} listas`+(sinReq?` · <span style="color:#b3261e">${sinReq} sin requerimiento</span>`:"")) : "Aún no agregas evidencias.";
